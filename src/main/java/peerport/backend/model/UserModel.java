@@ -1,0 +1,130 @@
+package peerport.backend.model;
+
+import java.util.List;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+
+@Entity
+@Table(name="\"Users\"")
+public class UserModel {
+    
+    @Id
+    @Column(name="\"userId\"")
+    @GeneratedValue(strategy=GenerationType.UUID)
+    private String userId;
+
+    private String name;
+
+    private String email;
+
+    @Column(name="\"profilePictureUrl\"")
+    private String profilePictureUrl;
+
+    @Column(name="\"idNumber\"")
+    private String idNumber;
+
+    private Enum<RoleModel.Role> role;
+
+    // Oauth2 fields
+    private String provider;
+
+    @Column(name="\"providerId\"")
+    private String providerId;
+
+    @OneToMany(mappedBy="user", cascade=CascadeType.ALL)
+    private List<EnrollmentModel> enrollments;
+
+
+    // Default constructor
+    public UserModel() { }
+
+
+    // Parameterized constructor
+    public UserModel(
+        String userId, 
+        String name, 
+        String email,
+        String profilePictureUrl,
+        String idNumber,
+        Enum<RoleModel.Role> role
+    ) {
+        this.userId = userId;
+        this.name = name;
+        this.email = email;
+        this.profilePictureUrl = profilePictureUrl;
+        this.idNumber = idNumber;
+        this.role = role;
+    }
+
+    // Getters and Setters
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getProfilePictureUrl() {
+        return profilePictureUrl;
+    }
+
+    public void setProfilePictureUrl(String profilePictureUrl) {
+        this.profilePictureUrl = profilePictureUrl;
+    }
+
+    public String getIdNumber() {
+        return idNumber;
+    }
+
+    public void setIdNumber(String idNumber) {
+        this.idNumber = idNumber;
+    }
+
+    public Enum<RoleModel.Role> getRole() {
+        return role;
+    }
+
+    public void setRole(Enum<RoleModel.Role> role) {
+        this.role = role;
+    }
+
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider;
+    }
+
+    public String getProviderId() {
+        return providerId;
+    }
+
+    public void setProviderId(String providerId) {
+        this.providerId = providerId;
+    }
+}
