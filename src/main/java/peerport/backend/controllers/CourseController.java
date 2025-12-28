@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import peerport.backend.model.CourseModel;
@@ -19,6 +20,7 @@ public class CourseController {
     
     // Get all courses
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     public ResponseEntity<List<CourseModel>> getAllCourses() {
         List<CourseModel> courses = courseService.getAllCourses();
         return ResponseEntity.ok(courses);
@@ -34,6 +36,7 @@ public class CourseController {
 
     // Create new course
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     public ResponseEntity<CourseModel> createCourse(@RequestBody CourseModel course) {
         CourseModel savedCourse = courseService.saveCourse(course);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedCourse);
@@ -41,6 +44,7 @@ public class CourseController {
 
     // Update course
     @PutMapping("/{uuid}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     public ResponseEntity<CourseModel> updateCourse(@PathVariable String uuid, @RequestBody CourseModel course) {
         return courseService.updateCourse(uuid, course)
                 .map(ResponseEntity::ok)
@@ -49,6 +53,7 @@ public class CourseController {
 
     // Delete course
     @DeleteMapping("/{uuid}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'INSTRUCTOR')")
     public ResponseEntity<Void> deleteCourse(@PathVariable String uuid) {
         boolean deleted = courseService.deleteCourse(uuid);
         if (deleted) {
