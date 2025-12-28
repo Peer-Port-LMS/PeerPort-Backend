@@ -103,6 +103,10 @@ public class AuthService extends DefaultOAuth2UserService {
         }
     }
 
+    public Optional<UserModel> getCurrentUser() {
+        return currentUser();
+    }
+
     // Get the currently authenticated user
     private Optional<UserModel> currentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
