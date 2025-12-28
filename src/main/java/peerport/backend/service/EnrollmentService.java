@@ -33,8 +33,6 @@ public class EnrollmentService {
     // Update enrollment
     public Optional<EnrollmentModel> updateEnrollment(String enrollmentId, EnrollmentModel updatedEnrollment) {
         return enrollmentRepository.findById(enrollmentId).map(enrollment -> {
-            enrollment.setEnrolled(updatedEnrollment.getEnrolled());
-            enrollment.setCompleted(updatedEnrollment.getCompleted());
             enrollment.setDateEnrolled(updatedEnrollment.getDateEnrolled());
             enrollment.setUser(updatedEnrollment.getUser());
             enrollment.setCourse(updatedEnrollment.getCourse());

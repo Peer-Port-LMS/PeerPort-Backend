@@ -14,7 +14,6 @@ import peerport.backend.model.CourseModel;
 import peerport.backend.model.UserModel;
 import peerport.backend.service.AuthService;
 import peerport.backend.service.CourseService;
-import peerport.backend.service.EnrollmentService;
 
 @RestController
 @RequestMapping("/courses")

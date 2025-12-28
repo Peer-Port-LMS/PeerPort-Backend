@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.PastOrPresent;
+import peerport.backend.validation.ValidEndDateAfterStartDate;
 
 @Entity
 @Table(name="\"Enrollments\"")

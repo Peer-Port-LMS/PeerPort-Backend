@@ -12,8 +12,8 @@ public class EndDateAfterStartDate implements ConstraintValidator<ValidEndDateAf
     
     @Override
     public void initialize(ValidEndDateAfterStartDate constraintAnnotation) {
-        this.startDate = constraintAnnotation.startDateField();
-        this.endDate = constraintAnnotation.endDateField();
+        this.startDate = constraintAnnotation.startDate();
+        this.endDate = constraintAnnotation.endDate();
     }
 
     @Override
@@ -25,23 +25,23 @@ public class EndDateAfterStartDate implements ConstraintValidator<ValidEndDateAf
 
         try {
             // Build getter method names
-            String startMethod = "get" + startDateField.substring(0,1).toUpperCase() + startDateField.substring(1);
-            String endMethod = "get" + endDateField.substring(0,1).toUpperCase() + endDateField.substring(1);
+            String startMethod = "get" + startDate.substring(0,1).toUpperCase() + startDate.substring(1);
+            String endMethod = "get" + endDate.substring(0,1).toUpperCase() + endDate.substring(1);
 
             // Use reflection to get startDate and endDate
-        Method getStartDate = obj.getClass().getMethod(startMethod);
+            Method getStartDate = obj.getClass().getMethod(startMethod);
             Method getEndDate = obj.getClass().getMethod(endMethod);
 
-            Date startDate = (Date) getStartDate.invoke(obj);
-            Date endDate = (Date) getEndDate.invoke(obj);
+            Date startDateValue = (Date) getStartDate.invoke(obj);
+            Date endDateValue = (Date) getEndDate.invoke(obj);
 
             // If either date is null, allow it (use @NotNull for required validation)
-            if (startDate == null || endDate == null) {
+            if (startDateValue == null || endDateValue == null) {
                 return true;
             }
 
             // Check that endDate is after startDate
-            return endDate.after(startDate);
+            return endDateValue.after(startDateValue);
         } catch (NoSuchMethodException e) {
             // If the methods don't exist, the validation passes
             // (this validator only applies to classes with these methods)
