@@ -2,8 +2,6 @@ package peerport.backend.model;
 
 import java.util.List;
 
-import org.springframework.stereotype.Component;
-
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
