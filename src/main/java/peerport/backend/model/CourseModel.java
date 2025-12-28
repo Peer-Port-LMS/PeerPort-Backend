@@ -19,6 +19,8 @@ import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import peerport.backend.dto.CourseDTO;
+import peerport.backend.dto.UserDTO;
 import peerport.backend.validation.ValidEndDateAfterStartDate;
 
 
@@ -52,7 +54,6 @@ public class CourseModel {
     private Date startDate;
 
     @Column(name="\"endDate\"")
-    @NotNull(message="End date is required")
     @FutureOrPresent(message="End date cannot be in the past")
     private Date endDate;
 
@@ -161,17 +162,27 @@ public class CourseModel {
     }
 
 
+    // Convert to DTO
+    public CourseDTO toDTO() {
+        // Make new DTO 
+        CourseDTO dto = new CourseDTO();
 
-    @Override
-    public String toString() {
-        return "CourseModel{" +
-                "courseId='" + courseId + '\'' +
-                ", name='" + name + '\'' +
-                ", courseCode='" + courseCode + '\'' +
-                ", isOpen=" + isOpen +
-                ", description='" + description + '\'' +
-                ", startDate=" + startDate +
-                ", endDate=" + endDate +
-                '}';
+        // Populate fields
+        dto.courseId = this.courseId;
+        dto.name = this.name;
+        dto.courseCode = this.courseCode;
+        dto.isOpen = this.isOpen;
+        dto.description = this.description;
+        dto.startDate = this.startDate != null ? this.startDate.toString() : null;
+        dto.endDate = this.endDate != null ? this.endDate.toString() : null;
+        dto.visiable = this.isOpen;
+
+        // Convert instructors to DTOs then to an array
+        dto.instructors = this.instructors.stream()
+                .map(UserModel::toDTO)
+                .toArray(UserDTO[]::new);
+        
+        // Return the DTO
+        return dto;
     }
 }
