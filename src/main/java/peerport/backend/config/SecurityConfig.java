@@ -50,6 +50,7 @@ public class SecurityConfig {
 
             // Enable OAuth2 login
             .oauth2Login(oauth2 -> oauth2
+                .defaultSuccessUrl("http://localhost:5173/login?redirect=true", true)
                 .userInfoEndpoint(userInfo -> userInfo
                     .userService(authService)
                 )

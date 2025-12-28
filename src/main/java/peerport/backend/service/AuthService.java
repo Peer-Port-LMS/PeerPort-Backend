@@ -16,6 +16,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
 import peerport.backend.database.UserRepository;
+import peerport.backend.dto.UserDTO;
 import peerport.backend.model.UserModel;
 import peerport.backend.model.RoleModel.Role;
 
@@ -91,6 +92,15 @@ public class AuthService extends DefaultOAuth2UserService {
         return user.isPresent() &&
             user.get().getRole() != null &&
             allowed.contains(user.get().getRole());
+    }
+
+    public Optional<UserDTO> getUser() {
+        Optional<UserModel> user = currentUser();
+        if (user.isPresent()) {
+            return Optional.of(user.get().toDTO());
+        } else {
+            return Optional.empty();
+        }
     }
 
     // Get the currently authenticated user

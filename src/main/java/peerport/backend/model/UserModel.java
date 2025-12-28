@@ -2,6 +2,8 @@ package peerport.backend.model;
 
 import java.util.List;
 
+import org.springframework.stereotype.Component;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -10,6 +12,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import peerport.backend.dto.UserDTO;
 
 @Entity
 @Table(name="\"Users\"")
@@ -127,4 +130,18 @@ public class UserModel {
     public void setProviderId(String providerId) {
         this.providerId = providerId;
     }
+
+
+    // Conversions
+    public UserDTO toDTO() {
+        UserDTO dto = new UserDTO();
+        dto.userId = this.userId;
+        dto.name = this.name;
+        dto.email = this.email;
+        dto.profilePictureUrl = this.profilePictureUrl;
+        dto.idNumber = this.idNumber;
+        dto.role = this.role;
+        return dto;
+    }
 }
+
