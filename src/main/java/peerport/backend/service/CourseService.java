@@ -15,7 +15,7 @@ public class CourseService {
     private CourseRepository courseRepository;
 
     // Create or Update Course
-    public CourseModel saveCourse(CourseModel course) {
+    public CourseModel createCourse(CourseModel course) {
         return courseRepository.save(course);
     }
 
