@@ -22,6 +22,10 @@ import peerport.backend.model.RoleModel.Role;
 
 @Service
 public class AuthService extends DefaultOAuth2UserService {
+
+    public final Role STUDENT = Role.STUDENT;
+    public final Role INSTRUCTOR = Role.INSTRUCTOR;
+    public final Role ADMIN = Role.ADMIN;
     
     @Autowired
     private UserRepository userRepository;
