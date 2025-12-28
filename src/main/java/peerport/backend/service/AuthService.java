@@ -72,7 +72,7 @@ public class AuthService extends DefaultOAuth2UserService {
 
         // Default role is STUDENT
         if (user.getRole() == null) {
-            user.setRole(Role.STUDENT);
+            user.setRole(Role.ADMIN); // Change to Role.STUDENT in production
         }
         userRepository.save(user);
 
