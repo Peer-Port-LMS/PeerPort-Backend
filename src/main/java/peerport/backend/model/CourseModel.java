@@ -1,20 +1,30 @@
 package peerport.backend.model;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.FutureOrPresent;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import peerport.backend.validation.ValidEndDateAfterStartDate;
 
 
 @Entity
 @Table(name="\"Courses\"")
+@ValidEndDateAfterStartDate
 public class CourseModel {
 
     @Id
@@ -22,25 +32,41 @@ public class CourseModel {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String courseId;
 
+    @NotBlank(message="Course name is required")
+    @Size(min=2, message="Course name must be at least 2 characters long")
     private String name;
 
     @Column(name="\"courseCode\"")
+    @Size(min=2, message="Course code must be at least 2 characters long")
     private String courseCode;
 
     @Column(name="\"isOpen\"")
-    private Boolean isOpen;
+    private Boolean isOpen = false;
 
+    @Size(max=500, message="Description cannot exceed 500 characters")
     private String description;
 
     @Column(name="\"startDate\"")
+    @NotNull(message="Start date is required")
+    @FutureOrPresent(message="Start date cannot be in the past")
     private Date startDate;
 
     @Column(name="\"endDate\"")
+    @NotNull(message="End date is required")
+    @FutureOrPresent(message="End date cannot be in the past")
     private Date endDate;
 
+    // Connections
     @OneToMany(mappedBy="course", cascade=CascadeType.ALL)
     private List<EnrollmentModel> enrollments;
 
+    @ManyToMany
+    @JoinTable(
+        name="\"CourseInstructors\"",
+        joinColumns={@JoinColumn(name = "\"courseId\"")},
+        inverseJoinColumns={@JoinColumn(name = "\"userId\"")}  
+    )
+    private List<UserModel> instructors = new ArrayList<>();
 
     // Default constructor
     public CourseModel() { }
@@ -118,6 +144,22 @@ public class CourseModel {
     public void setEndDate(Date endDate) {
         this.endDate = endDate;
     }
+
+    public List<UserModel> getInstructors() {
+        return this.instructors;
+    }
+
+    public boolean addInstructor(UserModel instructor) {
+        return this.instructors.add(instructor);
+    }
+
+    public boolean removeInstructor(UserModel instructor) {
+        if (this.instructors.remove(instructor)) {
+            return true;
+        }
+        return false;
+    }
+
 
 
     @Override

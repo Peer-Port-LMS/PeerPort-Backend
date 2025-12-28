@@ -10,9 +10,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.PastOrPresent;
 
 @Entity
 @Table(name="\"Enrollments\"")
+@ValidEndDateAfterStartDate(startDate="dateEnrolled", endDate="dateCompleted")
 public class EnrollmentModel {
     
     @Id
@@ -20,12 +22,12 @@ public class EnrollmentModel {
     @GeneratedValue(strategy=GenerationType.UUID)
     private String enrollmentId;
 
-    private Boolean enrolled;
+    @Column(name="\"dateEnrolled\"", nullable=false, updatable=false)
+    private final Date dateEnrolled = new Date();
 
-    private Boolean completed;
-
-    @Column(name="\"dateEnrolled\"")
-    private Date dateEnrolled;
+    @Column(name="\"dateCompleted\"", nullable=true)
+    @PastOrPresent(message="Completion date cannot be in the future")
+    private Date dateCompleted;
 
     // Connections
     @ManyToOne
@@ -43,16 +45,12 @@ public class EnrollmentModel {
     // Parameterized constructor
     public EnrollmentModel(
         String enrollmentId,
-        Boolean enrolled,
-        Boolean completed,
-        Date dateEnrolled,
+        Date dateCompleted,
         UserModel user,
         CourseModel course
     ) {
         this.enrollmentId = enrollmentId;
-        this.enrolled = enrolled;
-        this.completed = completed;
-        this.dateEnrolled = dateEnrolled;
+        this.dateCompleted = dateCompleted;
         this.user = user;
         this.course = course;
     }
@@ -67,28 +65,20 @@ public class EnrollmentModel {
         this.enrollmentId = enrollmentId;
     }
 
-    public Boolean getEnrolled() {
-        return enrolled;
-    }
-
-    public void setEnrolled(Boolean enrolled) {
-        this.enrolled = enrolled;
-    }
-
-    public Boolean getCompleted() {
-        return completed;
-    }
-
-    public void setCompleted(Boolean completed) {
-        this.completed = completed;
-    }
-
     public Date getDateEnrolled() {
         return dateEnrolled;
     }
 
-    public void setDateEnrolled(Date dateEnrolled) {
-        this.dateEnrolled = dateEnrolled;
+    public Date setDateEnrolled(Date dateEnrolled) {
+        return this.dateEnrolled;
+    }
+
+    public Date getDateCompleted() {
+        return dateCompleted;
+    }
+
+    public void setDateCompleted(Date dateCompleted) {
+        this.dateCompleted = dateCompleted;
     }
 
     public UserModel getUser() {
