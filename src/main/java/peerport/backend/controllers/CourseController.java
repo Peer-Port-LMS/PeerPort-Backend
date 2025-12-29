@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
 import peerport.backend.dto.CourseDTO;
+import peerport.backend.dto.CourseWithAllDetailsDTO;
 import peerport.backend.model.CourseModel;
 import peerport.backend.model.UserModel;
 import peerport.backend.service.AuthService;
@@ -40,10 +41,10 @@ public class CourseController {
 
     // Get course by ID
     @GetMapping("/{uuid}")
-    public ResponseEntity<CourseDTO> getCourseById(@PathVariable String uuid) {
+    public ResponseEntity<CourseWithAllDetailsDTO> getCourseById(@PathVariable String uuid) {
         // Get the course by ID and convert to DTO
         return courseService.getCourseById(uuid)
-                .map(course -> ResponseEntity.ok(course.toDTO()))
+                .map(course -> ResponseEntity.ok(course.toCourseWithAllDetailsDTO()))
                 .orElse(ResponseEntity.notFound().build());
     }
 
