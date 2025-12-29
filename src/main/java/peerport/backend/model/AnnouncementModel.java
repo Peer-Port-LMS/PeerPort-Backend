@@ -15,15 +15,13 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import peerport.backend.dto.AnnouncementDTO;
-import peerport.backend.validation.ValidEndDateAfterStartDate;
 
 @Entity
 @Table(name="\"Announcements\"")
-@ValidEndDateAfterStartDate(startDate="dateCreated", endDate="dateUpdated", message="Update date must be after creation date")
 public class AnnouncementModel {
 
     @Id
-    @Column(name="\"announcementId\"")
+    @Column(name="\"announcementId\"", updatable=false, nullable=false)
     @GeneratedValue(strategy=GenerationType.UUID)
     private String announcementId;
 
@@ -34,11 +32,11 @@ public class AnnouncementModel {
     public String content;
 
     @CreationTimestamp
-    @Column(name="\"dateCreated\"")
-    private Date dateCreated = new Date();
+    @Column(name="\"dateCreated\"", updatable=false, nullable=false)
+    private Date dateCreated;
 
     @UpdateTimestamp
-    @Column(name="\"dateUpdated\"")
+    @Column(name="\"dateUpdated\"", nullable=false)
     private Date dateUpdated;
 
     // Connections
