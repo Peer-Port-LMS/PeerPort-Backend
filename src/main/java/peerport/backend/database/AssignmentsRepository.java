@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 import peerport.backend.model.AssignmentModel;
 
 @Repository
-public interface AssignmentRepository extends JpaRepository<AssignmentModel, String> {
+public interface AssignmentsRepository extends JpaRepository<AssignmentModel, String> {
 }
