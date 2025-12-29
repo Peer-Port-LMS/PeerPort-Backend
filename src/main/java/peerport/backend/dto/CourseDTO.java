@@ -9,5 +9,4 @@ public class CourseDTO {
     public String startDate;
     public String endDate;
     public Boolean visiable;
-    public UserDTO[] instructors;
 }
