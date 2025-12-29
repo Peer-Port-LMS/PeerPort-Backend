@@ -19,7 +19,11 @@ import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import peerport.backend.dto.AnnouncementDTO;
 import peerport.backend.dto.CourseDTO;
+import peerport.backend.dto.CourseWithAllDetailsDTO;
+import peerport.backend.dto.CourseWithAnnouncementsDTO;
+import peerport.backend.dto.CourseWithInstructors;
 import peerport.backend.dto.UserDTO;
 import peerport.backend.validation.ValidEndDateAfterStartDate;
 
@@ -68,6 +72,16 @@ public class CourseModel {
         inverseJoinColumns={@JoinColumn(name = "\"userId\"")}  
     )
     private List<UserModel> instructors = new ArrayList<>();
+
+    @OneToMany(mappedBy="course", cascade=CascadeType.ALL)
+    private List<AnnouncementModel> announcements = new ArrayList<>();
+
+    @OneToMany(mappedBy="course", cascade=CascadeType.ALL)
+    private List<AssignmentModel> assignments = new ArrayList<>();
+
+    @OneToMany(mappedBy="course", cascade=CascadeType.ALL)
+    private List<ContentModel> content = new ArrayList<>();
+
 
     // Default constructor
     public CourseModel() { }
@@ -164,8 +178,26 @@ public class CourseModel {
 
     // Convert to DTO
     public CourseDTO toDTO() {
-        // Make new DTO 
+        // Make new DTO
         CourseDTO dto = new CourseDTO();
+
+        // Fill in fields
+        dto.courseId = this.courseId;
+        dto.name = this.name;
+        dto.courseCode = this.courseCode;
+        dto.isOpen = this.isOpen;
+        dto.description = this.description;
+        dto.startDate = this.startDate != null ? this.startDate.toString() : null;
+        dto.endDate = this.endDate != null ? this.endDate.toString() : null;
+        dto.visiable = this.isOpen;
+
+        // Return the DTO
+        return dto;
+    }
+
+    public CourseWithInstructors toCourseWithInstructorsDTO() {
+        // Make new DTO 
+        CourseWithInstructors dto = new CourseWithInstructors();
 
         // Populate fields
         dto.courseId = this.courseId;
@@ -181,6 +213,57 @@ public class CourseModel {
         dto.instructors = this.instructors.stream()
                 .map(UserModel::toDTO)
                 .toArray(UserDTO[]::new);
+        
+        // Return the DTO
+        return dto;
+    }
+
+    public CourseWithAnnouncementsDTO toCourseWithAnnouncementsDTO() {
+        // Make new DTO 
+        CourseWithAnnouncementsDTO dto = new CourseWithAnnouncementsDTO();
+
+        // Populate fields
+        dto.courseId = this.courseId;
+        dto.name = this.name;
+        dto.courseCode = this.courseCode;
+        dto.isOpen = this.isOpen;
+        dto.description = this.description;
+        dto.startDate = this.startDate != null ? this.startDate.toString() : null;
+        dto.endDate = this.endDate != null ? this.endDate.toString() : null;
+        dto.visiable = this.isOpen;
+
+        // Convert announcements to DTOs then to an array
+        dto.announcements = this.announcements.stream()
+                .map(AnnouncementModel::toDTO)
+                .toArray(AnnouncementDTO[]::new);
+        
+        // Return the DTO
+        return dto;
+    }
+
+    public CourseWithAllDetailsDTO toCourseWithAllDetailsDTO() {
+        // Make new DTO 
+        CourseWithAllDetailsDTO dto = new CourseWithAllDetailsDTO();
+
+        // Populate fields
+        dto.courseId = this.courseId;
+        dto.name = this.name;
+        dto.courseCode = this.courseCode;
+        dto.isOpen = this.isOpen;
+        dto.description = this.description;
+        dto.startDate = this.startDate != null ? this.startDate.toString() : null;
+        dto.endDate = this.endDate != null ? this.endDate.toString() : null;
+        dto.visiable = this.isOpen;
+
+        // Convert instructors to DTOs then to an array
+        dto.instructors = this.instructors.stream()
+                .map(UserModel::toDTO)
+                .toArray(UserDTO[]::new);
+
+        // Convert announcements to DTOs then to an array
+        dto.announcements = this.announcements.stream()
+                .map(AnnouncementModel::toDTO)
+                .toArray(AnnouncementDTO[]::new);
         
         // Return the DTO
         return dto;

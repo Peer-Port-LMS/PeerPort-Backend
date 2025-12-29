@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import peerport.backend.dto.AnnouncementDTO;
 
 @Entity
 @Table(name="\"Announcements\"")
@@ -98,5 +99,22 @@ public class AnnouncementModel {
 
     public void setCourse(List<CourseModel> course) {
         this.course = course;
+    }
+
+
+    // To DTO
+    public AnnouncementDTO toDTO() {
+        // Create new DTO
+        AnnouncementDTO dto = new AnnouncementDTO();
+        
+        // Fill in fields
+        dto.announcementId = this.announcementId;
+        dto.title = this.title;
+        dto.content = this.content;
+        dto.dateCreated = this.dateCreated;
+        dto.dateUpdated = this.dateUpdated;
+        
+        // Return DTO
+        return dto;
     }
 }
