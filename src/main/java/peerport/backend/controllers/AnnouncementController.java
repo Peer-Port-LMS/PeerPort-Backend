@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import peerport.backend.dto.AnnouncementDTO;
 import peerport.backend.model.AnnouncementModel;
 import peerport.backend.service.AnnouncementService;
 
@@ -24,14 +25,18 @@ public class AnnouncementController {
 
     // Get all announcements
     @GetMapping
-    public ResponseEntity<List<AnnouncementModel>> getAllAnnouncements() {
+    public ResponseEntity<List<AnnouncementDTO>> getAllAnnouncements() {
+        // Get all announcements
         List<AnnouncementModel> announcements = announcementService.getAllAnnouncements();
-        return ResponseEntity.ok(announcements);
+
+        // Convert to DTOs
+        List<AnnouncementDTO> announcementDTOs = announcements.stream().map(AnnouncementModel::toDTO).toList();
+        return ResponseEntity.ok(announcementDTOs);
     }
 
     // Get announcement by ID
     @GetMapping("/{announcementId}")
-    public ResponseEntity<AnnouncementModel> getAnnouncementById(@PathVariable String announcementId) {
+    public ResponseEntity<AnnouncementDTO> getAnnouncementById(@PathVariable String announcementId) {
         // Get the announcement by ID
         Optional<AnnouncementModel> announcement = announcementService.getAnnouncementById(announcementId);
 
@@ -41,27 +46,27 @@ public class AnnouncementController {
         
         // Otherwise, return the announcement with 200 OK
         } else {
-            AnnouncementModel ann = announcement.get();
+            AnnouncementDTO ann = announcement.get().toDTO();
             return ResponseEntity.ok(ann);
         }
     }
 
     // Create announcement
     @PostMapping
-    public ResponseEntity<AnnouncementModel> createAnnouncement(@RequestBody AnnouncementModel announcementModel) {
+    public ResponseEntity<AnnouncementDTO> createAnnouncement(@RequestBody AnnouncementModel announcementModel) {
         AnnouncementModel createdAnnouncement = announcementService.createAnnouncement(announcementModel);
-        return ResponseEntity.status(201).body(createdAnnouncement);
+        return ResponseEntity.status(201).body(createdAnnouncement.toDTO());
     }
 
     // Update announcement
     @PostMapping("/{announcementId}")
-    public ResponseEntity<AnnouncementModel> updateAnnouncement(@PathVariable String announcementId, @RequestBody AnnouncementModel updatedAnnouncement) {
+    public ResponseEntity<AnnouncementDTO> updateAnnouncement(@PathVariable String announcementId, @RequestBody AnnouncementModel updatedAnnouncement) {
         // Update the announcement
         Optional<AnnouncementModel> updated = announcementService.updateAnnouncement(announcementId, updatedAnnouncement);
         
         // Check if the update was successful and return appropriate response
         if (updated.isPresent()) {
-            return ResponseEntity.ok(updated.get());
+            return ResponseEntity.ok(updated.get().toDTO());
         } else {
             return ResponseEntity.notFound().build();
         }
