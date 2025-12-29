@@ -6,14 +6,14 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import peerport.backend.database.AssignmentRepository;
+import peerport.backend.database.AssignmentsRepository;
 import peerport.backend.model.AssignmentModel;
 
 @Service
 public class AssignmentService {
     
     @Autowired
-    private AssignmentRepository assignmentRepository;
+    private AssignmentsRepository assignmentRepository;
 
     // Create Assignment
     public AssignmentModel createAssignment(AssignmentModel assignment) {

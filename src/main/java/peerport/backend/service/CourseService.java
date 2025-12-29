@@ -2,7 +2,7 @@ package peerport.backend.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import peerport.backend.database.CourseRepository;
+import peerport.backend.database.CoursesRepository;
 import peerport.backend.model.CourseModel;
 
 import java.util.List;
@@ -12,7 +12,7 @@ import java.util.Optional;
 public class CourseService {
 
     @Autowired
-    private CourseRepository courseRepository;
+    private CoursesRepository courseRepository;
 
     // Create or Update Course
     public CourseModel createCourse(CourseModel course) {

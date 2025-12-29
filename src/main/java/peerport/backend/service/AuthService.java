@@ -15,7 +15,7 @@ import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
-import peerport.backend.database.UserRepository;
+import peerport.backend.database.UsersRepository;
 import peerport.backend.dto.UserDTO;
 import peerport.backend.model.UserModel;
 import peerport.backend.model.RoleModel.Role;
@@ -28,7 +28,7 @@ public class AuthService extends DefaultOAuth2UserService {
     public final Role ADMIN = Role.ADMIN;
     
     @Autowired
-    private UserRepository userRepository;
+    private UsersRepository userRepository;
 
     // Load the user into the daatabase upon authentication
     @Override

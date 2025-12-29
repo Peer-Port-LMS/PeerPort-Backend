@@ -6,14 +6,14 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import peerport.backend.database.EnrollmentRepository;
+import peerport.backend.database.EnrollmentsRepository;
 import peerport.backend.model.EnrollmentModel;
 
 @Service
 public class EnrollmentService {
     
     @Autowired
-    private EnrollmentRepository enrollmentRepository;
+    private EnrollmentsRepository enrollmentRepository;
 
     // Create Enrollment
     public EnrollmentModel createEnrollment(EnrollmentModel enrollment) {

@@ -6,14 +6,14 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import peerport.backend.database.UserRepository;
+import peerport.backend.database.UsersRepository;
 import peerport.backend.model.UserModel;
 
 @Service
 public class UserService {
     
     @Autowired
-    private UserRepository userRepository;
+    private UsersRepository userRepository;
 
     // Create user
     public UserModel createUser(UserModel user) {
