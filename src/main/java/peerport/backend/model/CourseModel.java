@@ -261,8 +261,10 @@ public class CourseModel {
                 .toArray(UserDTO[]::new);
 
         // Convert announcements to DTOs then to an array
+        // Then sort by dateUpdated descending
         dto.announcements = this.announcements.stream()
                 .map(AnnouncementModel::toDTO)
+                .sorted((a1, a2) -> a2.dateUpdated.compareTo(a1.dateUpdated))
                 .toArray(AnnouncementDTO[]::new);
         
         // Return the DTO
