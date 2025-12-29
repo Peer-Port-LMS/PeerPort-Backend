@@ -29,7 +29,7 @@ public class AnnouncementModel {
     private Date dateCreated = new Date();
 
     @Column(name="\"dateUpdated\"")
-    private Date dateUpdated = new Date();
+    private Date dateUpdated;
 
     // Connections
     @ManyToOne
