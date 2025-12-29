@@ -44,15 +44,23 @@ public class AnnouncementService {
     }
 
     // Update announcement
-    public Optional<AnnouncementModel> updateAnnouncement(String announcementId, AnnouncementModel updatedAnnouncement) {
-        return announcementsRepository.findById(announcementId).map(announcement -> {
-            announcement.setTitle(updatedAnnouncement.getTitle());
-            announcement.setContent(updatedAnnouncement.getContent());
-            announcement.setDateCreated(updatedAnnouncement.getDateCreated());
-            announcement.setDateUpdated(updatedAnnouncement.getDateUpdated());
-            announcement.setCourse(updatedAnnouncement.getCourse());
-            return announcementsRepository.save(announcement);
-        });
+    public AnnouncementModel updateAnnouncement(String announcementId, AnnouncementModel updatedAnnouncement) throws IllegalArgumentException {
+        // Get the ancouncement by ID
+        Optional<AnnouncementModel> announcement = announcementsRepository.findById(announcementId);
+
+        // Check if the announcment exists
+        if (announcement.isEmpty()) {
+            throw new IllegalArgumentException("Announcement with ID " + announcementId + " not found.");
+        }
+        
+        // Update the announcement
+        AnnouncementModel existingAnnouncement = announcement.get();
+        existingAnnouncement.setTitle(updatedAnnouncement.getTitle() != null ? updatedAnnouncement.getTitle() : existingAnnouncement.getTitle());
+        existingAnnouncement.setContent(updatedAnnouncement.getContent() != null ? updatedAnnouncement.getContent() : existingAnnouncement.getContent());
+
+        // Update the announcement in the database
+        announcementsRepository.save(existingAnnouncement);
+        return existingAnnouncement;
     }
 
     // Delete announcement
