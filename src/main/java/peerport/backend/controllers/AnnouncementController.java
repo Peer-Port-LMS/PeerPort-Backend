@@ -57,7 +57,6 @@ public class AnnouncementController {
     // Create announcement
     @PostMapping("/{courseId}")
     public ResponseEntity<AnnouncementDTO> createAnnouncement(@PathVariable String courseId, @Valid @RequestBody AnnouncementModel announcementModel) {
-        // Create the announcement
         AnnouncementModel createdAnnouncement;
 
         // Try to create announcement and catch illegal argument exception
@@ -76,15 +75,19 @@ public class AnnouncementController {
     // Update announcement
     @PutMapping("/{announcementId}")
     public ResponseEntity<AnnouncementDTO> updateAnnouncement(@PathVariable String announcementId, @RequestBody AnnouncementModel updatedAnnouncement) {
-        // Update the announcement
-        Optional<AnnouncementModel> updated = announcementService.updateAnnouncement(announcementId, updatedAnnouncement);
+        AnnouncementModel updated;
         
-        // Check if the update was successful and return appropriate response
-        if (updated.isPresent()) {
-            return ResponseEntity.ok(updated.get().toDTO());
-        } else {
+        // Try to update announcement
+        try {
+            updated = announcementService.updateAnnouncement(announcementId, updatedAnnouncement);
+
+        // Catch illegal argument exception and return 404 Not Found
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
+        
+        // Return the updated announcement with 200 OK
+        return ResponseEntity.ok(updated.toDTO());
     }
 
     // Delete announcement
