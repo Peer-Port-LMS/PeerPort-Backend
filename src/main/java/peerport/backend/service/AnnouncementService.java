@@ -15,8 +15,21 @@ public class AnnouncementService {
     @Autowired
     private AnnouncementsRepository announcementsRepository;
 
+    @Autowired
+    private CourseService courseService;
+
     // Create Announcment
-    public AnnouncementModel createAnnouncement(AnnouncementModel announcement) {
+    public AnnouncementModel createAnnouncement(String courseId, AnnouncementModel announcement) throws IllegalArgumentException {
+        // Get the course by ID
+        var courseOpt = courseService.getCourseById(courseId);
+        if (courseOpt.isEmpty()) {
+            throw new IllegalArgumentException("Course with ID " + courseId + " not found.");
+        }
+
+        // Set the course to the announcement
+        announcement.setCourse(courseOpt.get());
+
+        // Save the announcement
         return announcementsRepository.save(announcement);
     }
 
