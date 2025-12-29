@@ -5,13 +5,16 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import jakarta.validation.Valid;
 import peerport.backend.dto.AnnouncementDTO;
 import peerport.backend.model.AnnouncementModel;
 import peerport.backend.service.AnnouncementService;
@@ -52,14 +55,26 @@ public class AnnouncementController {
     }
 
     // Create announcement
-    @PostMapping
-    public ResponseEntity<AnnouncementDTO> createAnnouncement(@RequestBody AnnouncementModel announcementModel) {
-        AnnouncementModel createdAnnouncement = announcementService.createAnnouncement(announcementModel);
+    @PostMapping("/{courseId}")
+    public ResponseEntity<AnnouncementDTO> createAnnouncement(@PathVariable String courseId, @Valid @RequestBody AnnouncementModel announcementModel) {
+        // Create the announcement
+        AnnouncementModel createdAnnouncement;
+
+        // Try to create announcement and catch illegal argument exception
+        try {
+            createdAnnouncement = announcementService.createAnnouncement(courseId, announcementModel);
+        
+        // Catch illegal argument exception and return 404 Not Found
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Return the created announcement with 201 Created
         return ResponseEntity.status(201).body(createdAnnouncement.toDTO());
     }
 
     // Update announcement
-    @PostMapping("/{announcementId}")
+    @PutMapping("/{announcementId}")
     public ResponseEntity<AnnouncementDTO> updateAnnouncement(@PathVariable String announcementId, @RequestBody AnnouncementModel updatedAnnouncement) {
         // Update the announcement
         Optional<AnnouncementModel> updated = announcementService.updateAnnouncement(announcementId, updatedAnnouncement);
@@ -73,7 +88,7 @@ public class AnnouncementController {
     }
 
     // Delete announcement
-    @PostMapping("/delete/{announcementId}")
+    @DeleteMapping("/delete/{announcementId}")
     public ResponseEntity<Void> deleteAnnouncement(@PathVariable String announcementId) {
         // Delete the announcement
         boolean deleted = announcementService.deleteAnnouncement(announcementId);
