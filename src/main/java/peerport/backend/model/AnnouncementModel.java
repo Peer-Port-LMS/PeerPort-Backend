@@ -1,7 +1,9 @@
 package peerport.backend.model;
 
 import java.util.Date;
-import java.util.List;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,30 +13,42 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.FutureOrPresent;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
 import peerport.backend.dto.AnnouncementDTO;
+import peerport.backend.validation.ValidEndDateAfterStartDate;
 
 @Entity
 @Table(name="\"Announcements\"")
+@ValidEndDateAfterStartDate(startDate="dateCreated", endDate="dateUpdated", message="Update date must be after creation date")
 public class AnnouncementModel {
-    
+
     @Id
     @Column(name="\"announcementId\"")
     @GeneratedValue(strategy=GenerationType.UUID)
     private String announcementId;
 
+    @NotBlank(message="Title cannot be blank")
     public String title;
+
+    @NotBlank(message="Content cannot be blank")
     public String content;
 
+    @CreationTimestamp
     @Column(name="\"dateCreated\"")
     private Date dateCreated = new Date();
 
+    @UpdateTimestamp
     @Column(name="\"dateUpdated\"")
     private Date dateUpdated;
 
     // Connections
     @ManyToOne
     @JoinColumn(name="\"courseId\"", nullable=false)
-    private List<CourseModel> course;
+    private CourseModel course;
+
 
     // Default constructor
     public AnnouncementModel() { }
@@ -44,7 +58,7 @@ public class AnnouncementModel {
         String announcementId,
         String title,
         String content,
-        List<CourseModel> course
+        CourseModel course
     ) {
         this.announcementId = announcementId;
         this.title = title;
@@ -93,11 +107,11 @@ public class AnnouncementModel {
         this.dateUpdated = dateUpdated;
     }
 
-    public List<CourseModel> getCourse() {
+    public CourseModel getCourse() {
         return course;
     }
 
-    public void setCourse(List<CourseModel> course) {
+    public void setCourse(CourseModel course) {
         this.course = course;
     }
 
