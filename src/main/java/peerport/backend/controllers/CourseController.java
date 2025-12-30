@@ -22,11 +22,14 @@ import peerport.backend.model.groups.OnCreate;
 import peerport.backend.service.AuthService;
 import peerport.backend.service.CourseService;
 import peerport.backend.service.FileService;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 @RestController
 @RequestMapping("/courses")
 public class CourseController {
 
+    // Services
     @Autowired
     private CourseService courseService;
 
@@ -36,6 +39,10 @@ public class CourseController {
     @Autowired
     private AuthService authService;
     
+    // Helper
+    @Autowired
+    private ObjectMapper objectMapper;
+
     // Get all courses
     @GetMapping
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN)")
@@ -63,13 +70,10 @@ public class CourseController {
     public ResponseEntity<CourseDTO> createCourse(
         // Form data
         @Validated({OnCreate.class, Default.class}) @RequestPart(value="course", required=false) CourseModel courseFromForm,
-        @RequestPart(value="image", required=false) MultipartFile image,
-
-        // Regular data
-        @RequestBody(required=false) CourseModel courseFromBody
+        @RequestPart(value="image", required=false) MultipartFile image
     ) {
         // Get the course from either FormData or JSON body
-        CourseModel course = courseFromForm != null ? courseFromForm : courseFromBody;
+        CourseModel course = courseFromForm;
         
         // Validate that course data was provided
         if (course == null) {
@@ -122,13 +126,10 @@ public class CourseController {
 
         // Form data
         @RequestPart(value="course", required=false) CourseModel courseFromForm,
-        @RequestPart(value="image", required=false) MultipartFile image,
-
-        // Regular data
-        @RequestBody(required=false) CourseModel courseFromBody
+        @RequestPart(value="image", required=false) MultipartFile image
     ) {
         // Get the course from either FormData or JSON body
-        CourseModel course = courseFromForm != null ? courseFromForm : courseFromBody;
+        CourseModel course = courseFromForm;
         
         // Validate that course data was provided
         if (course == null) {
@@ -171,14 +172,25 @@ public class CourseController {
         @PathVariable String uuid,
 
         // Form data
-        @RequestPart(value="course", required=false) CourseModel courseFromForm,
-        @RequestPart(value="image", required=false) MultipartFile image,
-
-        // Regular data
-        @RequestBody(required=false) CourseModel courseFromBody
+        @RequestPart(value="course", required=false) String courseJsonFromForm,
+        @RequestPart(value="image", required=false) MultipartFile image
     ) {
+        // Set default for courseFromForm
+        CourseModel courseFromForm = null;
+
+        // Try to parse the course JSON from form data
+        try {
+            // Convert json to CourseModel object
+            courseFromForm = courseJsonFromForm != null ?
+                    objectMapper.readValue(courseJsonFromForm, CourseModel.class) : null;
+
+        // Catch JSON parsing exceptions
+        } catch (JacksonException e) {
+            return ResponseEntity.badRequest().build();
+        }
+
         // Get the course from either FormData or JSON body
-        CourseModel course = courseFromForm != null ? courseFromForm : courseFromBody;
+        CourseModel course = courseFromForm;
         
         // Validate that course data was provided
         if (course == null) {
