@@ -4,7 +4,6 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 **/application.properties
-uploads/**/*.*
 
 ### STS ###
 .apt_generated
@@ -35,4 +34,4 @@ build/
 .vscode/
 
 # Random files while testing
-uploads/**
+uploads/**/*.*
