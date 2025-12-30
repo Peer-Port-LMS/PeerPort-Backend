@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -74,20 +75,34 @@ public class AnnouncementController {
 
     // Update announcement
     @PutMapping("/{announcementId}")
-    public ResponseEntity<AnnouncementDTO> updateAnnouncement(@PathVariable String announcementId, @RequestBody AnnouncementModel updatedAnnouncement) {
-        AnnouncementModel updated;
-        
-        // Try to update announcement
+    public ResponseEntity<AnnouncementDTO> updateAnnouncement(@PathVariable String announcementId, @Valid @RequestBody AnnouncementModel updatedAnnouncement) {
         try {
-            updated = announcementService.updateAnnouncement(announcementId, updatedAnnouncement);
+            // Try to update announcement
+            AnnouncementModel updated = announcementService.updateAnnouncement(announcementId, updatedAnnouncement);
+            
+            // Return the updated announcement with 200 OK
+            return ResponseEntity.ok(updated.toDTO());
 
         // Catch illegal argument exception and return 404 Not Found
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
         }
-        
-        // Return the updated announcement with 200 OK
-        return ResponseEntity.ok(updated.toDTO());
+    }
+
+    // Patch announcement
+    @PatchMapping("/patch/{announcementId}")
+    public ResponseEntity<AnnouncementDTO> patchAnnouncement(@PathVariable String announcementId, @RequestBody AnnouncementModel patchedAnnouncement) {
+        try {
+            // Try to patch announcement
+            AnnouncementModel patched = announcementService.patchAnnouncement(announcementId, patchedAnnouncement);
+            
+            // Return the patched announcement with 200 OK
+            return ResponseEntity.ok(patched.toDTO());
+
+        // Catch illegal argument exception and return 404 Not Found
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     // Delete announcement

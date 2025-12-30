@@ -76,10 +76,33 @@ public class CourseController {
     @PutMapping("/{uuid}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<CourseDTO> updateCourse(@PathVariable String uuid, @Valid @RequestBody CourseModel course) {
-        // Update the course and convert to DTO
-        return courseService.updateCourse(uuid, course)
-                .map(updatedCourse -> ResponseEntity.ok(updatedCourse.toDTO()))
-                .orElse(ResponseEntity.notFound().build());
+        try {
+            // Try to update the course
+            CourseModel updatedCourse = courseService.updateCourse(uuid, course);
+
+            // Return teh updated course
+            return ResponseEntity.ok(updatedCourse.toDTO());
+
+        // Catch illegal argument exception and return 404 Not Found
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PatchMapping("/{uuid}")
+    @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
+    public ResponseEntity<CourseDTO> patchCourse(@PathVariable String uuid, @RequestBody CourseModel course) {
+        try {
+            // Try to update the course
+            CourseModel updatedCourse = courseService.patchCourse(uuid, course);
+
+            // Return the updated course
+            return ResponseEntity.ok(updatedCourse.toDTO());
+
+        // Catch illegal argument exception and return 404 Not Found
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     // Delete course
