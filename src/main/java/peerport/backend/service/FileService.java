@@ -20,9 +20,9 @@ public class FileService {
     @Autowired
     private FilesRepository filesRepository;
     
-    @Value("${file.upload-dir:upload-dir:uploads/}")
+    @Value("${file.upload-dir}")
     private String uploadDir;
-    private String coursesDir = uploadDir + "courses/";
+    private String coursesDir = "courses";
 
 
     // Regular functions
@@ -42,7 +42,7 @@ public class FileService {
         String fileName = "course_" + courseId + (fileExtension.isEmpty() ? "" : "." + fileExtension);
 
         // Save the image
-        String savedImagePath = saveImage(file, this.coursesDir + fileName);
+        String savedImagePath = saveFile(file, this.uploadDir + "/" + this.coursesDir + "/" + fileName);
 
         // Return a new FileModel
         FileModel newFile = new FileModel(fileName, savedImagePath, fileExtension);
@@ -70,16 +70,16 @@ public class FileService {
         return fileName.substring(fileName.lastIndexOf('.') + 1);
     }
 
-    // Saves an image
-    private String saveImage(MultipartFile file, String fileName) throws IOException {
+    // Saves a file
+    private String saveFile(MultipartFile file, String path) throws IOException {
         // Create directory if it doesn't exsit
-        Path uploadPath = Paths.get(uploadDir);
+        Path uploadPath = Paths.get(path).getParent();
         if (!Files.exists(uploadPath)) {
             Files.createDirectories(uploadPath);
         }
 
         // Save the file
-        Path filePath = uploadPath.resolve(fileName);
+        Path filePath = Paths.get(path);
         Files.write(filePath, file.getBytes());
 
         return filePath.toString();
