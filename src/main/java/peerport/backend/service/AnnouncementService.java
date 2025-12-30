@@ -55,11 +55,39 @@ public class AnnouncementService {
         
         // Update the announcement
         AnnouncementModel existingAnnouncement = announcement.get();
-        existingAnnouncement.setTitle(updatedAnnouncement.getTitle() != null ? updatedAnnouncement.getTitle() : existingAnnouncement.getTitle());
-        existingAnnouncement.setContent(updatedAnnouncement.getContent() != null ? updatedAnnouncement.getContent() : existingAnnouncement.getContent());
+        existingAnnouncement.setTitle(updatedAnnouncement.getTitle());
+        existingAnnouncement.setContent(updatedAnnouncement.getContent());
 
         // Update the announcement in the database
         announcementsRepository.save(existingAnnouncement);
+
+        // Return the updated announcement
+        return existingAnnouncement;
+    }
+    
+    // Patch / parrtial update announcement
+    public AnnouncementModel patchAnnouncement(String announcementId, AnnouncementModel patchedAnnouncement) throws IllegalArgumentException {
+        // Get the ancouncement by ID
+        Optional<AnnouncementModel> announcement = announcementsRepository.findById(announcementId);
+
+        // Check if the announcment exists
+        if (announcement.isEmpty()) {
+            throw new IllegalArgumentException("Announcement with ID " + announcementId + " not found.");
+        }
+        
+        // Patch the announcement
+        AnnouncementModel existingAnnouncement = announcement.get();
+        if (patchedAnnouncement.getTitle() != null) {
+            existingAnnouncement.setTitle(patchedAnnouncement.getTitle());
+        }
+        if (patchedAnnouncement.getContent() != null) {
+            existingAnnouncement.setContent(patchedAnnouncement.getContent());
+        }
+
+        // Update the announcement in the database
+        announcementsRepository.save(existingAnnouncement);
+
+        // Return the updated announcement
         return existingAnnouncement;
     }
 
