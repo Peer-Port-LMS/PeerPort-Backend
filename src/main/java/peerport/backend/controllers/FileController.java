@@ -66,6 +66,7 @@ public class FileController {
         
         // Catch IOExceptions
         } catch (IOException e) {
+            e.printStackTrace();
             return ResponseEntity.internalServerError().build();
         }
     }

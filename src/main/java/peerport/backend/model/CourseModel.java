@@ -84,7 +84,7 @@ public class CourseModel {
     @OneToMany(mappedBy="course", cascade=CascadeType.ALL)
     private List<ContentModel> content = new ArrayList<>();
 
-    @OneToOne(cascade=CascadeType.ALL)
+    @OneToOne()
     private FileModel image;
 
     // Default constructor
@@ -196,7 +196,7 @@ public class CourseModel {
         dto.description = this.description;
         dto.startDate = this.startDate != null ? this.startDate.toString() : null;
         dto.endDate = this.endDate != null ? this.endDate.toString() : null;
-        dto.visiable = this.isOpen;
+        dto.visible = this.isOpen;
         dto.imageURL = this.image != null ? this.image.getUrl() : null;
 
         // Return filled in dto

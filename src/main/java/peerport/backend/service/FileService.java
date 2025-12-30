@@ -44,7 +44,7 @@ public class FileService {
     }
 
     // Save a course image
-    public FileModel saveCourseImage(MultipartFile file, String courseId) throws IOException {
+    public FileModel saveCourseImage(MultipartFile file, String courseId) throws IOException, IllegalArgumentException {
         // Get the file extension
         String fileExtension = getFileExtension(file.getOriginalFilename());
 
@@ -56,8 +56,11 @@ public class FileService {
 
         // Get the content type
         String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new IllegalArgumentException("File must be an image. Received: " + contentType);
+        }
 
-        // Save the FileModel
+        // Save the FileModel - The fileID is not generated until saved
         FileModel newFile = new FileModel(fileName, savedImagePath, fileExtension, contentType);
         filesRepository.save(newFile);
 
@@ -70,13 +73,13 @@ public class FileService {
 
     // Delete a file
     public void deleteFile(FileModel file) throws IOException, IllegalArgumentException {
-        // Delete the file from the repo first
-        filesRepository.delete(file);
-
         // Delete the file from the filesystem
         if (!deleteFile(file.getFilePath())) {
             throw new IllegalArgumentException("File not found on the filesystem: " + file.getFilePath());
         }
+
+        // Delete the file from the repo first
+        filesRepository.delete(file);
     }
 
     // Get file extension
@@ -89,7 +92,7 @@ public class FileService {
 
     // Saves a file
     private String saveFile(MultipartFile file, String path) throws IOException {
-        // Create directory if it doesn't exsit
+        // Create directory if it doesn't exist
         Path uploadPath = Paths.get(path).getParent();
         if (!Files.exists(uploadPath)) {
             Files.createDirectories(uploadPath);
@@ -105,10 +108,6 @@ public class FileService {
     // Delete a file
     private boolean deleteFile(String path) throws IOException{
         Path filePath = Paths.get(path);
-        if (Files.exists(filePath)) {
-            Files.delete(filePath);
-            return true;
-        }
-        return false;
+        return Files.deleteIfExists(filePath);
     }
 }

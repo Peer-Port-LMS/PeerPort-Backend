@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -42,6 +43,11 @@ public class CourseController {
     // Helper
     @Autowired
     private ObjectMapper objectMapper;
+
+    
+    // Enviroment vairables
+    @Value("${file.upload-size-limit}")
+    private long fileUploadSizeLimit;
 
 
     // Get all courses
@@ -90,25 +96,30 @@ public class CourseController {
         }
 
         // Validate the image
-        if (image != null && image.getSize() > 5242880) { // 5MB limit
+        if (image != null && image.getSize() > fileUploadSizeLimit) { // 5MB limit
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         }
 
         try {
-            // Create the course
+            // Add the user as an instructor before saving
+            course.addInstructor(currentUser.get());
+            
+            // Create the course once
             CourseModel savedCourse = courseService.createCourse(course);
-
-            // Addd the user as an instructor
-            savedCourse.addInstructor(currentUser.get());
         
             // Save the image if needed
             if (image != null) {
-                FileModel savedCourseImage = fileService.saveCourseImage(image, savedCourse.getCourseId());
-                savedCourse.setImage(savedCourseImage);
+                try {
+                    FileModel savedCourseImage = fileService.saveCourseImage(image, savedCourse.getCourseId());
+                    savedCourse.setImage(savedCourseImage);
+                    // Update course with image reference
+                    savedCourse = courseService.updateCourse(savedCourse.getCourseId(), savedCourse);
+                } catch (IOException e) {
+                    // If image save fails, delete the created course to avoid orphans
+                    courseService.deleteCourse(savedCourse.getCourseId());
+                    throw e;
+                }
             }
-            
-            // Save the course
-            savedCourse = courseService.createCourse(savedCourse);
 
             // Return the created course
             return ResponseEntity.status(HttpStatus.CREATED).body(savedCourse.toDTO());
@@ -138,7 +149,7 @@ public class CourseController {
         }
 
         // Validate the image
-        if (image != null && image.getSize() > 5242880) { // 5MB limit
+        if (image != null && image.getSize() > fileUploadSizeLimit) { // 5MB limit
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         }
 
@@ -149,6 +160,11 @@ public class CourseController {
             // Save the image if needed
             if (image != null) {
                 FileModel savedCourseImage = fileService.saveCourseImage(image, updatedCourse.getCourseId());
+                // Delete old image to prevent orphans
+                FileModel oldImage = updatedCourse.getImage();
+                if (oldImage != null) {
+                    fileService.deleteFile(oldImage);
+                }
                 updatedCourse.setImage(savedCourseImage);
                 updatedCourse = courseService.updateCourse(uuid, updatedCourse);
             }
@@ -191,7 +207,7 @@ public class CourseController {
         }
 
         try {
-            // Get the course from the request or databse
+            // Get the course from the request or database
             CourseModel course;
             CourseModel updatedCourse;
 
@@ -213,7 +229,7 @@ public class CourseController {
             }
 
             // Validate the image
-            if (image != null && image.getSize() > 5242880) { // 5MB limit
+            if (image != null && image.getSize() > fileUploadSizeLimit) { // 5MB limit
                 return ResponseEntity.badRequest().build();
             }
 
