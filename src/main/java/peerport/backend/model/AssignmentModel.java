@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import peerport.backend.dto.AssignmentDTO;
 
 @Entity
 @Table(name="\"Assignments\"")
@@ -129,5 +130,22 @@ public class AssignmentModel {
 
     public void setCourse(CourseModel course) {
         this.course = course;
+    }
+
+
+    // Conver to DTO
+    public AssignmentDTO toDTO() {
+        // Create a new DTO
+        AssignmentDTO dto = new AssignmentDTO();
+
+        // Fill in the fields
+        dto.assignmentId = this.assignmentId;
+        dto.name = this.name;
+        dto.description = this.description;
+        dto.visible = this.visible;
+        dto.dueDate = this.dueDate;
+
+        // Return the dto
+        return dto;
     }
 }

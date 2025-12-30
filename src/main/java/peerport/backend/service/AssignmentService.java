@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import peerport.backend.database.AssignmentsRepository;
 import peerport.backend.model.AssignmentModel;
+import peerport.backend.model.CourseModel;
 
 @Service
 public class AssignmentService {
@@ -15,8 +16,19 @@ public class AssignmentService {
     @Autowired
     private AssignmentsRepository assignmentRepository;
 
+    @Autowired
+    private CourseService courseService;
+
     // Create Assignment
-    public AssignmentModel createAssignment(AssignmentModel assignment) {
+    public AssignmentModel createAssignment(AssignmentModel assignment, String courseId) throws IllegalArgumentException {
+        // Get the course by ID
+        CourseModel course = courseService.getCourseById(courseId)
+                .orElseThrow(() -> new IllegalArgumentException("Course with ID " + courseId + " not found"));
+        
+        // Set the course to the assignment
+        assignment.setCourse(course);
+
+        // Return saved assignment
         return assignmentRepository.save(assignment);
     }
 
