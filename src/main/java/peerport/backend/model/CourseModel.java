@@ -87,7 +87,6 @@ public class CourseModel {
     @OneToOne(cascade=CascadeType.ALL)
     private FileModel image;
 
-
     // Default constructor
     public CourseModel() { }
 
@@ -198,7 +197,7 @@ public class CourseModel {
         dto.startDate = this.startDate != null ? this.startDate.toString() : null;
         dto.endDate = this.endDate != null ? this.endDate.toString() : null;
         dto.visiable = this.isOpen;
-        dto.imageURL = this.image != null ? this.image.getURL() : null;
+        dto.imageURL = this.image != null ? this.image.getUrl() : null;
 
         // Return filled in dto
         return dto;

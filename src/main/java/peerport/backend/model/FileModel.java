@@ -2,8 +2,8 @@ package peerport.backend.model;
 
 import java.util.Date;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.annotation.CreatedDate;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -30,21 +30,22 @@ public class FileModel {
     @Column(name="\"fileType\"", nullable=false)
     private String fileType;
 
-    @CreatedDate
-    @Column(name="\"dateCreated\"")
-    private Date dateCreated;
+    @Column(name="\"contentType\"", nullable=false)
+    private String contentType;
 
+    private String url;
+
+    @CreationTimestamp
+    @Column(name="\"dateCreated\"")
+    private Date dateCreated = new Date();
+
+    @UpdateTimestamp
     @Column(name="\"dateUpdated\"")
     private Date dateUpdated;
 
     // Connections
-    @OneToOne(mappedBy="image")
+    @OneToOne(mappedBy="image", orphanRemoval=true)
     private CourseModel course;
-
-
-    // Enviroment vairables
-    @Value("${server.url}/files/:localhost:8080/files/")
-    private static String fileUrl;
 
 
     // Default constructor
@@ -54,11 +55,13 @@ public class FileModel {
     public FileModel(
         String fileName,
         String filePath,
-        String fileType
+        String fileType,
+        String contentType
     ) {
         this.fileName = fileName;
         this.filePath = filePath;
         this.fileType = fileType;
+        this.contentType = contentType;
     }
 
 
@@ -91,6 +94,22 @@ public class FileModel {
         this.fileType = fileType;
     }
 
+    public String getContentType() {
+        return contentType;
+    }
+
+    public void setContentType(String contentType) {
+        this.contentType = contentType;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
     public Date getDateCreated() {
         return dateCreated;
     }
@@ -101,9 +120,5 @@ public class FileModel {
 
     public void setDateUpdated(Date dateUpdated) {
         this.dateUpdated = dateUpdated;
-    }
-
-    public String getURL() {
-        return fileUrl + this.fileId;
     }
 }

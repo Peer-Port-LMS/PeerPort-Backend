@@ -24,6 +24,9 @@ public class FileService {
     private String uploadDir;
     private String coursesDir = "courses";
 
+    @Value("${server.hosting-url}")
+    private String serverUrl;
+    private static String filesEndpoint = "files";
 
     // Regular functions
     public Optional<FileModel> getFileById(String fileId) {
@@ -32,6 +35,13 @@ public class FileService {
 
 
     // Specific functions
+    public String getFileUrl(String fileId) {
+        if (serverUrl == null || serverUrl.isEmpty()) {
+            System.err.println("Warning: serverUrl is not set properly. Default to localhost");
+            return "http://localhost:8080/" + filesEndpoint + "/" + fileId;
+        }
+        return serverUrl + "/" + filesEndpoint + "/" + fileId;
+    }
 
     // Save a course image
     public FileModel saveCourseImage(MultipartFile file, String courseId) throws IOException {
@@ -44,8 +54,15 @@ public class FileService {
         // Save the image
         String savedImagePath = saveFile(file, this.uploadDir + "/" + this.coursesDir + "/" + fileName);
 
-        // Return a new FileModel
-        FileModel newFile = new FileModel(fileName, savedImagePath, fileExtension);
+        // Get the content type
+        String contentType = file.getContentType();
+
+        // Save the FileModel
+        FileModel newFile = new FileModel(fileName, savedImagePath, fileExtension, contentType);
+        filesRepository.save(newFile);
+
+        // Get the url
+        newFile.setUrl(getFileUrl(newFile.getFileId()));
 
         // Save the file model to the database
         return filesRepository.save(newFile);

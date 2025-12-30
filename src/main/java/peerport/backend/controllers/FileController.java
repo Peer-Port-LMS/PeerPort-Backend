@@ -50,9 +50,12 @@ public class FileController {
             }
 
             // Determine content type
-            String contentType = Files.probeContentType(filePath);
-            if (contentType == null) {
-                contentType = "application/octet-stream";
+            String contentType = fileModel.get().getContentType();
+            if (contentType == null || contentType.isEmpty()) {
+                contentType = Files.probeContentType(filePath);
+                if (contentType == null) {
+                    contentType = "application/octet-stream";
+                }
             }
 
             // Return the file as a response entity
