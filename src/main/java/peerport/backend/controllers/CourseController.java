@@ -220,6 +220,10 @@ public class CourseController {
             // Save the image if needed
             if (image != null) {
                 FileModel savedCourseImage = fileService.saveCourseImage(image, updatedCourse.getCourseId());
+                FileModel oldImage = updatedCourse.getImage();
+                if (oldImage != null) {
+                    fileService.deleteFile(oldImage);
+                }
                 updatedCourse.setImage(savedCourseImage);
                 updatedCourse = courseService.patchCourse(uuid, updatedCourse);
             }
