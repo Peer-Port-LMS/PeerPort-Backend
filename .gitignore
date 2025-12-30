@@ -32,3 +32,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+# Random files while testing
+uploads/**

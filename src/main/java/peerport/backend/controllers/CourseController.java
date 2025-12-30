@@ -1,35 +1,55 @@
 package peerport.backend.controllers;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.validation.Valid;
 import jakarta.validation.groups.Default;
 import peerport.backend.dto.CourseDTO;
 import peerport.backend.dto.CourseWithAllDetailsDTO;
 import peerport.backend.model.CourseModel;
+import peerport.backend.model.FileModel;
 import peerport.backend.model.UserModel;
 import peerport.backend.model.groups.OnCreate;
 import peerport.backend.service.AuthService;
 import peerport.backend.service.CourseService;
+import peerport.backend.service.FileService;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 @RestController
 @RequestMapping("/courses")
 public class CourseController {
 
+    // Services
     @Autowired
     private CourseService courseService;
 
     @Autowired
+    private FileService fileService;
+
+    @Autowired
     private AuthService authService;
     
+    // Helper
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    
+    // Environment variables 
+    @Value("${file.upload-size-limit}")
+    private long fileUploadSizeLimit;
+
+
     // Get all courses
     @GetMapping
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN)")
@@ -51,10 +71,22 @@ public class CourseController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Create new course
+    // Create new course - Only takes formData add JSON option later
     @PostMapping
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
-    public ResponseEntity<CourseDTO> createCourse(@Validated({OnCreate.class, Default.class}) @RequestBody CourseModel course) {
+    public ResponseEntity<CourseDTO> createCourse(
+        // Form data
+        @Validated({OnCreate.class, Default.class}) @RequestPart(value="course", required=false) CourseModel courseFromForm,
+        @RequestPart(value="image", required=false) MultipartFile image
+    ) {
+        // Get the course from either FormData or JSON body
+        CourseModel course = courseFromForm;
+        
+        // Validate that course data was provided
+        if (course == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
         // Get the current user
         Optional<UserModel> currentUser = authService.getCurrentUser();
 
@@ -63,41 +95,81 @@ public class CourseController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        // Create the course
-        CourseModel savedCourse = courseService.createCourse(course);
+        // Validate the image
+        if (image != null && image.getSize() > fileUploadSizeLimit) { // 5MB limit
+            // TODO: Return specific error message
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
 
-        // Addd the user as an instructor
-        savedCourse.addInstructor(currentUser.get());
+        try {
+            // Add the user as an instructor before saving
+            course.addInstructor(currentUser.get());
+            
+            // Create the course once
+            CourseModel savedCourse = courseService.createCourse(course);
+        
+            // Save the image if needed
+            if (image != null) {
+                try {
+                    FileModel savedCourseImage = fileService.saveCourseImage(image, savedCourse.getCourseId());
+                    savedCourse.setImage(savedCourseImage);
+                    // Update course with image reference
+                    savedCourse = courseService.updateCourse(savedCourse.getCourseId(), savedCourse);
+                } catch (IOException e) {
+                    // If image save fails, delete the created course to avoid orphans
+                    courseService.deleteCourse(savedCourse.getCourseId());
+                    throw e;
+                }
+            }
 
-        // Save the course again
-        savedCourse = courseService.createCourse(savedCourse);
+            // Return the created course
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedCourse.toDTO());
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedCourse.toDTO());
+        // Catch IO exceptions
+        } catch (IOException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 
-    // Update course
+    // Update course - Only takes formData add JSON option later
     @PutMapping("/{uuid}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
-    public ResponseEntity<CourseDTO> updateCourse(@PathVariable String uuid, @Valid @RequestBody CourseModel course) {
+    public ResponseEntity<CourseDTO> updateCourse(
+        @PathVariable String uuid,
+
+        // Form data
+        @RequestPart(value="course", required=false) CourseModel courseFromForm,
+        @RequestPart(value="image", required=false) MultipartFile image
+    ) {
+        // Get the course from either FormData or JSON body
+        CourseModel course = courseFromForm;
+        
+        // Validate that course data was provided
+        if (course == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        // Validate the image
+        if (image != null && image.getSize() > fileUploadSizeLimit) { // 5MB limit
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
         try {
             // Try to update the course
             CourseModel updatedCourse = courseService.updateCourse(uuid, course);
 
-            // Return teh updated course
-            return ResponseEntity.ok(updatedCourse.toDTO());
-
-        // Catch illegal argument exception and return 404 Not Found
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
-    @PatchMapping("/{uuid}")
-    @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
-    public ResponseEntity<CourseDTO> patchCourse(@PathVariable String uuid, @RequestBody CourseModel course) {
-        try {
-            // Try to update the course
-            CourseModel updatedCourse = courseService.patchCourse(uuid, course);
+            // Save the image if needed
+            if (image != null) {
+                FileModel savedCourseImage = fileService.saveCourseImage(image, updatedCourse.getCourseId());
+                // Delete old image to prevent orphans
+                FileModel oldImage = updatedCourse.getImage();
+                if (oldImage != null) {
+                    fileService.deleteFile(oldImage);
+                }
+                updatedCourse.setImage(savedCourseImage);
+                updatedCourse = courseService.updateCourse(uuid, updatedCourse);
+            }
 
             // Return the updated course
             return ResponseEntity.ok(updatedCourse.toDTO());
@@ -105,6 +177,86 @@ public class CourseController {
         // Catch illegal argument exception and return 404 Not Found
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
+
+        // Catch IO exceptions
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    // Partially update course - Only takes formData add JSON option later
+    @PatchMapping("/{uuid}")
+    @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
+    public ResponseEntity<CourseDTO> patchCourse(
+        @PathVariable String uuid,
+
+        // Form data
+        @RequestPart(value="course", required=false) String courseJsonFromForm,
+        @RequestPart(value="image", required=false) MultipartFile image
+    ) {
+        // Set default for courseFromForm
+        CourseModel courseFromForm = null;
+
+        // Try to parse the course JSON from form data
+        try {
+            // Convert json to CourseModel object
+            courseFromForm = courseJsonFromForm != null ?
+                    objectMapper.readValue(courseJsonFromForm, CourseModel.class) : null;
+
+        // Catch JSON parsing exceptions
+        } catch (JacksonException e) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        try {
+            // Get the course from the request or database
+            CourseModel course;
+            CourseModel updatedCourse;
+
+            // The request contained course data
+            if (courseFromForm != null) {
+                course = courseFromForm;
+
+                // Try to update the course
+                updatedCourse = courseService.patchCourse(uuid, course);
+
+            // The request did not contain course data
+            } else {
+                // Get existing course from database
+                Optional<CourseModel> existingCourseOpt = courseService.getCourseById(uuid);
+                if (existingCourseOpt.isEmpty()) {
+                    return ResponseEntity.notFound().build();
+                }
+                updatedCourse = existingCourseOpt.get();
+            }
+
+            // Validate the image
+            if (image != null && image.getSize() > fileUploadSizeLimit) { // 5MB limit
+                return ResponseEntity.badRequest().build();
+            }
+
+            // Save the image if needed
+            if (image != null) {
+                FileModel savedCourseImage = fileService.saveCourseImage(image, updatedCourse.getCourseId());
+                FileModel oldImage = updatedCourse.getImage();
+                if (oldImage != null) {
+                    fileService.deleteFile(oldImage);
+                }
+                updatedCourse.setImage(savedCourseImage);
+                updatedCourse = courseService.patchCourse(uuid, updatedCourse);
+            }
+
+            // Return the updated course
+            return ResponseEntity.ok(updatedCourse.toDTO());
+
+        // Catch illegal argument exception and return 404 Not Found
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+
+        // Catch IO exceptions
+        } catch (IOException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 
