@@ -51,14 +51,14 @@ public class FileService {
         // Create the new file name
         String fileName = "course_" + courseId + (fileExtension.isEmpty() ? "" : "." + fileExtension);
 
-        // Save the image
-        String savedImagePath = saveFile(file, this.uploadDir + "/" + this.coursesDir + "/" + fileName);
-
         // Get the content type
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
             throw new IllegalArgumentException("File must be an image. Received: " + contentType);
         }
+
+        // Save the image
+        String savedImagePath = saveFile(file, this.uploadDir + "/" + this.coursesDir + "/" + fileName);
 
         // Save the FileModel - The fileID is not generated until saved
         FileModel newFile = new FileModel(fileName, savedImagePath, fileExtension, contentType);
@@ -74,7 +74,7 @@ public class FileService {
     // Delete a file
     public void deleteFile(FileModel file) throws IOException, IllegalArgumentException {
         // Delete the file from the filesystem
-        if (!deleteFile(file.getFilePath())) {
+        if (!deleteFileHelper(file.getFilePath())) {
             throw new IllegalArgumentException("File not found on the filesystem: " + file.getFilePath());
         }
 
@@ -106,7 +106,7 @@ public class FileService {
     }
 
     // Delete a file
-    private boolean deleteFile(String path) throws IOException{
+    private boolean deleteFileHelper(String path) throws IOException{
         Path filePath = Paths.get(path);
         return Files.deleteIfExists(filePath);
     }

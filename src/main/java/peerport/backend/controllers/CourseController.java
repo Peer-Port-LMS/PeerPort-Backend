@@ -45,7 +45,7 @@ public class CourseController {
     private ObjectMapper objectMapper;
 
     
-    // Enviroment vairables
+    // Environment variables 
     @Value("${file.upload-size-limit}")
     private long fileUploadSizeLimit;
 
@@ -97,6 +97,7 @@ public class CourseController {
 
         // Validate the image
         if (image != null && image.getSize() > fileUploadSizeLimit) { // 5MB limit
+            // TODO: Return specific error message
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         }
 
@@ -126,6 +127,7 @@ public class CourseController {
 
         // Catch IO exceptions
         } catch (IOException e) {
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
