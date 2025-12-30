@@ -2,6 +2,7 @@ package peerport.backend.model;
 
 import java.util.Date;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.annotation.CreatedDate;
 
 import jakarta.persistence.Column;
@@ -39,6 +40,11 @@ public class FileModel {
     // Connections
     @OneToOne(mappedBy="image")
     private CourseModel course;
+
+
+    // Enviroment vairables
+    @Value("${server.url}/files/:localhost:8080/files/")
+    private static String fileUrl;
 
 
     // Default constructor
@@ -97,7 +103,7 @@ public class FileModel {
         this.dateUpdated = dateUpdated;
     }
 
-    public String getURI() {
-        return "/files/" + this.fileId;
+    public String getURL() {
+        return fileUrl + this.fileId;
     }
 }

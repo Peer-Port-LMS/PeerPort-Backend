@@ -198,7 +198,7 @@ public class CourseModel {
         dto.startDate = this.startDate != null ? this.startDate.toString() : null;
         dto.endDate = this.endDate != null ? this.endDate.toString() : null;
         dto.visiable = this.isOpen;
-        dto.imageURI = this.image != null ? this.image.getURI() : null;
+        dto.imageURL = this.image != null ? this.image.getURL() : null;
 
         // Return filled in dto
         return dto;
