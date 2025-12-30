@@ -43,6 +43,7 @@ public class CourseController {
     @Autowired
     private ObjectMapper objectMapper;
 
+
     // Get all courses
     @GetMapping
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN)")
@@ -189,22 +190,32 @@ public class CourseController {
             return ResponseEntity.badRequest().build();
         }
 
-        // Get the course from either FormData or JSON body
-        CourseModel course = courseFromForm;
-        
-        // Validate that course data was provided
-        if (course == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
-        }
-
-        // Validate the image
-        if (image != null && image.getSize() > 5242880) { // 5MB limit
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
-        }
-
         try {
-            // Try to update the course
-            CourseModel updatedCourse = courseService.patchCourse(uuid, course);
+            // Get the course from the request or databse
+            CourseModel course;
+            CourseModel updatedCourse;
+
+            // The request contained course data
+            if (courseFromForm != null) {
+                course = courseFromForm;
+
+                // Try to update the course
+                updatedCourse = courseService.patchCourse(uuid, course);
+
+            // The request did not contain course data
+            } else {
+                // Get existing course from database
+                Optional<CourseModel> existingCourseOpt = courseService.getCourseById(uuid);
+                if (existingCourseOpt.isEmpty()) {
+                    return ResponseEntity.notFound().build();
+                }
+                updatedCourse = existingCourseOpt.get();
+            }
+
+            // Validate the image
+            if (image != null && image.getSize() > 5242880) { // 5MB limit
+                return ResponseEntity.badRequest().build();
+            }
 
             // Save the image if needed
             if (image != null) {
@@ -222,7 +233,8 @@ public class CourseController {
 
         // Catch IO exceptions
         } catch (IOException e) {
-            return ResponseEntity.internalServerError().build();
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 
