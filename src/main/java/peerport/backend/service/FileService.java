@@ -68,8 +68,8 @@ public class FileService {
         return filesRepository.save(newFile);
     }
 
-    // Delete a course image
-    public void deleteCourseImage(FileModel file) throws IOException, IllegalArgumentException {
+    // Delete a file
+    public void deleteFile(FileModel file) throws IOException, IllegalArgumentException {
         // Delete the file from the repo first
         filesRepository.delete(file);
 
