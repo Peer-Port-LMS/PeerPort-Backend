@@ -7,13 +7,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import jakarta.validation.groups.Default;
 import peerport.backend.dto.CourseDTO;
 import peerport.backend.dto.CourseWithAllDetailsDTO;
 import peerport.backend.model.CourseModel;
 import peerport.backend.model.UserModel;
+import peerport.backend.model.groups.OnCreate;
 import peerport.backend.service.AuthService;
 import peerport.backend.service.CourseService;
 
@@ -51,7 +54,7 @@ public class CourseController {
     // Create new course
     @PostMapping
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
-    public ResponseEntity<CourseDTO> createCourse(@Valid @RequestBody CourseModel course) {
+    public ResponseEntity<CourseDTO> createCourse(@Validated({OnCreate.class, Default.class}) @RequestBody CourseModel course) {
         // Get the current user
         Optional<UserModel> currentUser = authService.getCurrentUser();
 

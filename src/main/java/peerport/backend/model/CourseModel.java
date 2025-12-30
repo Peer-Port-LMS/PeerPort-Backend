@@ -25,6 +25,7 @@ import peerport.backend.dto.CourseWithAllDetailsDTO;
 import peerport.backend.dto.CourseWithAnnouncementsDTO;
 import peerport.backend.dto.CourseWithInstructors;
 import peerport.backend.dto.UserDTO;
+import peerport.backend.model.groups.OnCreate;
 import peerport.backend.validation.ValidEndDateAfterStartDate;
 
 
@@ -54,11 +55,11 @@ public class CourseModel {
 
     @Column(name="\"startDate\"")
     @NotNull(message="Start date is required")
-    @FutureOrPresent(message="Start date cannot be in the past")
+    @FutureOrPresent(message="Start date cannot be in the past", groups=OnCreate.class)
     private Date startDate;
 
     @Column(name="\"endDate\"")
-    @FutureOrPresent(message="End date cannot be in the past")
+    @FutureOrPresent(message="End date cannot be in the past", groups=OnCreate.class)
     private Date endDate;
 
     // Connections
