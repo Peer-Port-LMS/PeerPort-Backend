@@ -8,5 +8,6 @@ public class CourseDTO {
     public String description;
     public String startDate;
     public String endDate;
-    public Boolean visiable;
+    public Boolean visible;
+    public String imageURL;
 }

@@ -14,6 +14,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.NotBlank;
@@ -83,6 +84,8 @@ public class CourseModel {
     @OneToMany(mappedBy="course", cascade=CascadeType.ALL)
     private List<ContentModel> content = new ArrayList<>();
 
+    @OneToOne()
+    private FileModel image;
 
     // Default constructor
     public CourseModel() { }
@@ -90,7 +93,6 @@ public class CourseModel {
 
     // Parameterized constructor
     public CourseModel(
-        String courseId, 
         String name, 
         String courseCode,
         Boolean isOpen,
@@ -98,7 +100,6 @@ public class CourseModel {
         Date startDate,
         Date endDate
     ) {
-        this.courseId = courseId;
         this.name = name;
         this.courseCode = courseCode;
         this.isOpen = isOpen;
@@ -176,13 +177,18 @@ public class CourseModel {
         return false;
     }
 
+    public FileModel getImage() {
+        return image;
+    }
 
-    // Convert to DTO
-    public CourseDTO toDTO() {
-        // Make new DTO
-        CourseDTO dto = new CourseDTO();
+    public void setImage(FileModel image) {
+        this.image = image;
+    }
 
-        // Fill in fields
+
+    // DTO conversion helper
+    private <T extends CourseDTO> T fillInBasicInfo(T dto) {
+        // Fill in all standard fields
         dto.courseId = this.courseId;
         dto.name = this.name;
         dto.courseCode = this.courseCode;
@@ -190,10 +196,20 @@ public class CourseModel {
         dto.description = this.description;
         dto.startDate = this.startDate != null ? this.startDate.toString() : null;
         dto.endDate = this.endDate != null ? this.endDate.toString() : null;
-        dto.visiable = this.isOpen;
+        dto.visible = this.isOpen;
+        dto.imageURL = this.image != null ? this.image.getUrl() : null;
 
-        // Return the DTO
+        // Return filled in dto
         return dto;
+    }
+
+    // Convert to DTO
+    public CourseDTO toDTO() {
+        // Make new DTO
+        CourseDTO dto = new CourseDTO();
+
+        // Return the filled in DTO
+        return fillInBasicInfo(dto);
     }
 
     public CourseWithInstructors toCourseWithInstructorsDTO() {
@@ -201,14 +217,7 @@ public class CourseModel {
         CourseWithInstructors dto = new CourseWithInstructors();
 
         // Populate fields
-        dto.courseId = this.courseId;
-        dto.name = this.name;
-        dto.courseCode = this.courseCode;
-        dto.isOpen = this.isOpen;
-        dto.description = this.description;
-        dto.startDate = this.startDate != null ? this.startDate.toString() : null;
-        dto.endDate = this.endDate != null ? this.endDate.toString() : null;
-        dto.visiable = this.isOpen;
+        dto = fillInBasicInfo(dto);
 
         // Convert instructors to DTOs then to an array
         dto.instructors = this.instructors.stream()
@@ -223,15 +232,8 @@ public class CourseModel {
         // Make new DTO 
         CourseWithAnnouncementsDTO dto = new CourseWithAnnouncementsDTO();
 
-        // Populate fields
-        dto.courseId = this.courseId;
-        dto.name = this.name;
-        dto.courseCode = this.courseCode;
-        dto.isOpen = this.isOpen;
-        dto.description = this.description;
-        dto.startDate = this.startDate != null ? this.startDate.toString() : null;
-        dto.endDate = this.endDate != null ? this.endDate.toString() : null;
-        dto.visiable = this.isOpen;
+        // Fill in basic fields
+        dto = fillInBasicInfo(dto);
 
         // Convert announcements to DTOs then to an array
         dto.announcements = this.announcements.stream()
@@ -246,15 +248,8 @@ public class CourseModel {
         // Make new DTO 
         CourseWithAllDetailsDTO dto = new CourseWithAllDetailsDTO();
 
-        // Populate fields
-        dto.courseId = this.courseId;
-        dto.name = this.name;
-        dto.courseCode = this.courseCode;
-        dto.isOpen = this.isOpen;
-        dto.description = this.description;
-        dto.startDate = this.startDate != null ? this.startDate.toString() : null;
-        dto.endDate = this.endDate != null ? this.endDate.toString() : null;
-        dto.visiable = this.isOpen;
+        // Fill in basic fields
+        dto = fillInBasicInfo(dto);
 
         // Convert instructors to DTOs then to an array
         dto.instructors = this.instructors.stream()

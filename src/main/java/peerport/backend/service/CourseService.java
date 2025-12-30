@@ -14,7 +14,7 @@ public class CourseService {
     @Autowired
     private CoursesRepository courseRepository;
 
-    // Create or Update Course
+    // Create Course
     public CourseModel createCourse(CourseModel course) {
         return courseRepository.save(course);
     }

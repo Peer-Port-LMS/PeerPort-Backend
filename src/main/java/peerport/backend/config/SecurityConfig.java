@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -33,6 +34,9 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf.disable()) // Enable Cross-Site Request Forgery protection later
             .authorizeHttpRequests(auth -> auth
+                // Allow preflight OPTIONS requests
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
                 // Authenticated endpoints
                 .requestMatchers("/users/**").access((authentication, context) ->
                     new AuthorizationDecision(authService.hasAnyRole(Role.STUDENT, Role.INSTRUCTOR, Role.ADMIN))
@@ -69,8 +73,8 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration conf = new CorsConfiguration();
         conf.setAllowedOrigins(List.of("http://localhost:5173"));
-        conf.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        conf.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        conf.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        conf.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
         conf.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
