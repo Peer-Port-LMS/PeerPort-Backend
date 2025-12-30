@@ -12,7 +12,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import jakarta.validation.Valid;
 import jakarta.validation.groups.Default;
 import peerport.backend.dto.CourseDTO;
 import peerport.backend.dto.CourseWithAllDetailsDTO;
@@ -62,9 +61,21 @@ public class CourseController {
     @PostMapping
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<CourseDTO> createCourse(
-        @Validated({OnCreate.class, Default.class}) @RequestPart(value="course", required=true) CourseModel course,
-        @RequestPart(value="image", required=false) MultipartFile image
+        // Form data
+        @Validated({OnCreate.class, Default.class}) @RequestPart(value="course", required=false) CourseModel courseFromForm,
+        @RequestPart(value="image", required=false) MultipartFile image,
+
+        // Regular data
+        @RequestBody(required=false) CourseModel courseFromBody
     ) {
+        // Get the course from either FormData or JSON body
+        CourseModel course = courseFromForm != null ? courseFromForm : courseFromBody;
+        
+        // Validate that course data was provided
+        if (course == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
         // Get the current user
         Optional<UserModel> currentUser = authService.getCurrentUser();
 
@@ -106,26 +117,39 @@ public class CourseController {
     // Update course
     @PutMapping("/{uuid}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
-    public ResponseEntity<CourseDTO> updateCourse(@PathVariable String uuid, @Valid @RequestBody CourseModel course) {
+    public ResponseEntity<CourseDTO> updateCourse(
+        @PathVariable String uuid,
+
+        // Form data
+        @RequestPart(value="course", required=false) CourseModel courseFromForm,
+        @RequestPart(value="image", required=false) MultipartFile image,
+
+        // Regular data
+        @RequestBody(required=false) CourseModel courseFromBody
+    ) {
+        // Get the course from either FormData or JSON body
+        CourseModel course = courseFromForm != null ? courseFromForm : courseFromBody;
+        
+        // Validate that course data was provided
+        if (course == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        // Validate the image
+        if (image != null && image.getSize() > 5242880) { // 5MB limit
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
         try {
             // Try to update the course
             CourseModel updatedCourse = courseService.updateCourse(uuid, course);
 
-            // Return teh updated course
-            return ResponseEntity.ok(updatedCourse.toDTO());
-
-        // Catch illegal argument exception and return 404 Not Found
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        }
-    }
-
-    @PatchMapping("/{uuid}")
-    @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
-    public ResponseEntity<CourseDTO> patchCourse(@PathVariable String uuid, @RequestBody CourseModel course) {
-        try {
-            // Try to update the course
-            CourseModel updatedCourse = courseService.patchCourse(uuid, course);
+            // Save the image if needed
+            if (image != null) {
+                FileModel savedCourseImage = fileService.saveCourseImage(image, updatedCourse.getCourseId());
+                updatedCourse.setImage(savedCourseImage);
+                updatedCourse = courseService.updateCourse(uuid, updatedCourse);
+            }
 
             // Return the updated course
             return ResponseEntity.ok(updatedCourse.toDTO());
@@ -133,6 +157,60 @@ public class CourseController {
         // Catch illegal argument exception and return 404 Not Found
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
+
+        // Catch IO exceptions
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    // Partially update course
+    @PatchMapping("/{uuid}")
+    @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
+    public ResponseEntity<CourseDTO> patchCourse(
+        @PathVariable String uuid,
+
+        // Form data
+        @RequestPart(value="course", required=false) CourseModel courseFromForm,
+        @RequestPart(value="image", required=false) MultipartFile image,
+
+        // Regular data
+        @RequestBody(required=false) CourseModel courseFromBody
+    ) {
+        // Get the course from either FormData or JSON body
+        CourseModel course = courseFromForm != null ? courseFromForm : courseFromBody;
+        
+        // Validate that course data was provided
+        if (course == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        // Validate the image
+        if (image != null && image.getSize() > 5242880) { // 5MB limit
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+
+        try {
+            // Try to update the course
+            CourseModel updatedCourse = courseService.patchCourse(uuid, course);
+
+            // Save the image if needed
+            if (image != null) {
+                FileModel savedCourseImage = fileService.saveCourseImage(image, updatedCourse.getCourseId());
+                updatedCourse.setImage(savedCourseImage);
+                updatedCourse = courseService.patchCourse(uuid, updatedCourse);
+            }
+
+            // Return the updated course
+            return ResponseEntity.ok(updatedCourse.toDTO());
+
+        // Catch illegal argument exception and return 404 Not Found
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+
+        // Catch IO exceptions
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
         }
     }
 
