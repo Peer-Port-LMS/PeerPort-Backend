@@ -2,6 +2,8 @@ package peerport.backend.model;
 
 import java.util.Date;
 
+import org.hibernate.validator.constraints.Length;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -27,6 +29,7 @@ public class AssignmentModel {
     @NotBlank(message="Name cannot be blank")
     private String name;
 
+    @Length(max=2000, message="Description cannot exceed 2000 characters")
     private String description;
 
     private Boolean visible = true;
