@@ -10,6 +10,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import peerport.backend.dto.AssignmentDTO;
 
 @Entity
@@ -21,12 +23,15 @@ public class AssignmentModel {
     @GeneratedValue(strategy=GenerationType.UUID)
     private String assignmentId;
 
+    @NotNull
+    @NotBlank(message="Name cannot be blank")
     private String name;
 
     private String description;
 
-    private Boolean visible;
+    private Boolean visible = true;
 
+    @NotNull
     @Column(name="\"dueDate\"")
     private Date dueDate;
 

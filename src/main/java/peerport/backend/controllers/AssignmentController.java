@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -82,6 +83,21 @@ public class AssignmentController {
 
 		// Return the updated assignment as DTO
 		return ResponseEntity.ok(updatedAssignment.get().toDTO());
+	}
+
+	@PatchMapping("/{assignmentId}")
+	public ResponseEntity<AssignmentDTO> patchAssignment(@PathVariable String assignmentId, @RequestBody AssignmentModel assignment) {
+		try {
+			// Patch the assignment
+			AssignmentModel patchedAssignment = assignmentService.patchAssignment(assignmentId, assignment);
+
+			// Return the patched assignment as DTO
+			return ResponseEntity.ok(patchedAssignment.toDTO());
+
+		// Handle illegal argument exception
+		} catch (IllegalArgumentException e) {
+			return ResponseEntity.notFound().build();
+		}
 	}
 
 	@DeleteMapping("/{assignmentId}")

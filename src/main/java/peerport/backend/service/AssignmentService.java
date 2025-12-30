@@ -56,6 +56,41 @@ public class AssignmentService {
         });
     }
 
+    // Patch / partially update assignment
+    public AssignmentModel patchAssignment(String assignmentId, AssignmentModel updatedFields) throws IllegalArgumentException {
+        // Get the exsting assignment
+        Optional<AssignmentModel> assignment = assignmentRepository.findById(assignmentId);
+
+        // If assignment doesnt exsit return empty
+        if (assignment.isEmpty()) {
+            throw new IllegalArgumentException("Assignment with ID " + assignmentId + " not found");
+        }
+
+        // If assignment exists, update only the provided fields
+        AssignmentModel existingAssignment = assignment.get();
+        if (updatedFields.getName() != null) {
+            existingAssignment.setName(updatedFields.getName());
+        }
+        if (updatedFields.getDescription() != null) {
+            existingAssignment.setDescription(updatedFields.getDescription());
+        }
+        if (updatedFields.getVisible() != null) {
+            existingAssignment.setVisible(updatedFields.getVisible());
+        }
+        if (updatedFields.getDueDate() != null) {
+            existingAssignment.setDueDate(updatedFields.getDueDate());
+        }
+        if (updatedFields.getDateUpdated() != null) {
+            existingAssignment.setDateUpdated(updatedFields.getDateUpdated());
+        }
+        if (updatedFields.getCourse() != null) {
+            existingAssignment.setCourse(updatedFields.getCourse());
+        }
+
+        // Save and return the updated assignment
+        return assignmentRepository.save(existingAssignment);
+    }
+
     // Delete assignment
     public boolean deleteAssignment(String assignmentId) {
         if (assignmentRepository.existsById(assignmentId)) {
