@@ -21,6 +21,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import peerport.backend.dto.AnnouncementDTO;
+import peerport.backend.dto.AssignmentDTO;
 import peerport.backend.dto.CourseDTO;
 import peerport.backend.dto.CourseWithAllDetailsDTO;
 import peerport.backend.dto.CourseWithAnnouncementsDTO;
@@ -79,7 +80,7 @@ public class CourseModel {
     private List<AnnouncementModel> announcements = new ArrayList<>();
 
     @OneToMany(mappedBy="course", cascade=CascadeType.ALL)
-    private List<AssignmentModel> assignments = new ArrayList<>();
+    private List<AssignmentModel> assignments = new ArrayList<AssignmentModel>();
 
     @OneToMany(mappedBy="course", cascade=CascadeType.ALL)
     private List<ContentModel> content = new ArrayList<>();
@@ -262,6 +263,18 @@ public class CourseModel {
                 .map(AnnouncementModel::toDTO)
                 .sorted((a1, a2) -> a2.dateUpdated.compareTo(a1.dateUpdated))
                 .toArray(AnnouncementDTO[]::new);
+
+        // Convert assignments to DTOs then to an array
+        // Then sort by dueDate ascending
+        dto.assignments = this.assignments.stream()
+                .map(AssignmentModel::toDTO)
+                .sorted((a1, a2) -> {
+                    if (a1.dueDate == null && a2.dueDate == null) return 0;
+                    if (a1.dueDate == null) return 1;
+                    if (a2.dueDate == null) return -1;
+                    return a1.dueDate.compareTo(a2.dueDate);
+                })
+                .toArray(AssignmentDTO[]::new);
         
         // Return the DTO
         return dto;

@@ -2,6 +2,8 @@ package peerport.backend.model;
 
 import java.util.Date;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.validator.constraints.Length;
 
 import jakarta.persistence.Column;
@@ -38,15 +40,17 @@ public class AssignmentModel {
     @Column(name="\"dueDate\"")
     private Date dueDate;
 
+    @CreationTimestamp
     @Column(name="\"dateCreated\"")
     private Date dateCreated;
 
+    @UpdateTimestamp
     @Column(name="\"dateUpdated\"")
     private Date dateUpdated;
 
     // Connections
     @ManyToOne
-    @JoinColumn(name="\"courseId\"", nullable=false)
+    @JoinColumn(name="\"assignnments\"", nullable=false)
     private CourseModel course;
 
 
