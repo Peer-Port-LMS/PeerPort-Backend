@@ -1,5 +1,6 @@
 package peerport.backend.controllers;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 
@@ -9,16 +10,19 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.Valid;
 import jakarta.validation.groups.Default;
 import peerport.backend.dto.CourseDTO;
 import peerport.backend.dto.CourseWithAllDetailsDTO;
 import peerport.backend.model.CourseModel;
+import peerport.backend.model.FileModel;
 import peerport.backend.model.UserModel;
 import peerport.backend.model.groups.OnCreate;
 import peerport.backend.service.AuthService;
 import peerport.backend.service.CourseService;
+import peerport.backend.service.FileService;
 
 @RestController
 @RequestMapping("/courses")
@@ -26,6 +30,9 @@ public class CourseController {
 
     @Autowired
     private CourseService courseService;
+
+    @Autowired
+    private FileService fileService;
 
     @Autowired
     private AuthService authService;
@@ -54,7 +61,10 @@ public class CourseController {
     // Create new course
     @PostMapping
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
-    public ResponseEntity<CourseDTO> createCourse(@Validated({OnCreate.class, Default.class}) @RequestBody CourseModel course) {
+    public ResponseEntity<CourseDTO> createCourse(
+        @Validated({OnCreate.class, Default.class}) @RequestPart(value="course", required=true) CourseModel course,
+        @RequestPart(value="image", required=false) MultipartFile image
+    ) {
         // Get the current user
         Optional<UserModel> currentUser = authService.getCurrentUser();
 
@@ -63,16 +73,34 @@ public class CourseController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        // Create the course
-        CourseModel savedCourse = courseService.createCourse(course);
+        // Validate the image
+        if (image != null && image.getSize() > 5242880) { // 5MB limit
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
 
-        // Addd the user as an instructor
-        savedCourse.addInstructor(currentUser.get());
+        try {
+            // Create the course
+            CourseModel savedCourse = courseService.createCourse(course);
 
-        // Save the course again
-        savedCourse = courseService.createCourse(savedCourse);
+            // Addd the user as an instructor
+            savedCourse.addInstructor(currentUser.get());
+        
+            // Save the image if needed
+            if (image != null) {
+                FileModel savedCourseImage = fileService.saveCourseImage(image, savedCourse.getCourseId());
+                savedCourse.setImage(savedCourseImage);
+            }
+            
+            // Save the course
+            savedCourse = courseService.createCourse(savedCourse);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedCourse.toDTO());
+            // Return the created course
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedCourse.toDTO());
+
+        // Catch IO exceptions
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 
     // Update course
