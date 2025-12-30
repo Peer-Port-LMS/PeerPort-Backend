@@ -64,7 +64,7 @@ public class CourseController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Create new course
+    // Create new course - Only takes formData add JSON option later
     @PostMapping
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<CourseDTO> createCourse(
@@ -118,7 +118,7 @@ public class CourseController {
         }
     }
 
-    // Update course
+    // Update course - Only takes formData add JSON option later
     @PutMapping("/{uuid}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<CourseDTO> updateCourse(
@@ -165,7 +165,7 @@ public class CourseController {
         }
     }
 
-    // Partially update course
+    // Partially update course - Only takes formData add JSON option later
     @PatchMapping("/{uuid}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<CourseDTO> patchCourse(
