@@ -31,16 +31,22 @@ public class AssignmentController {
 
 	@GetMapping
 	public ResponseEntity<List<AssignmentWithCourseDTO>> getAllAssignments() {
-		// Get all assignments
-		List<AssignmentModel> assignments = assignmentService.getAllAssignments();
+		try {
+			// Get all assignments
+			List<AssignmentModel> assignments = assignmentService.getAllAssignments();
 
-		// Convert to DTOs
-		List<AssignmentWithCourseDTO> assignmentDTOs = assignments.stream()
-				.map(AssignmentModel::toAssignmentWithCourseDTO)
-				.toList();
-		
-		// Return the list of DTOs
-		return ResponseEntity.ok(assignmentDTOs);
+			// Convert to DTOs
+			List<AssignmentWithCourseDTO> assignmentDTOs = assignments.stream()
+					.map(AssignmentModel::toAssignmentWithCourseDTO)
+					.toList();
+			
+			// Return the list of DTOs
+			return ResponseEntity.ok(assignmentDTOs);
+
+		// Catch illegal argument exception
+		} catch (IllegalArgumentException e) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+		}
 	}
 
 	@GetMapping("/{assignmentId}")

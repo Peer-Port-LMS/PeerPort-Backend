@@ -25,7 +25,7 @@ import peerport.backend.dto.AssignmentDTO;
 import peerport.backend.dto.CourseDTO;
 import peerport.backend.dto.CourseWithAllDetailsDTO;
 import peerport.backend.dto.CourseWithAnnouncementsDTO;
-import peerport.backend.dto.CourseWithInstructors;
+import peerport.backend.dto.CourseWithInstructorsDTO;
 import peerport.backend.dto.UserDTO;
 import peerport.backend.model.groups.OnCreate;
 import peerport.backend.validation.ValidEndDateAfterStartDate;
@@ -229,9 +229,9 @@ public class CourseModel {
         return fillInBasicInfo(dto);
     }
 
-    public CourseWithInstructors toCourseWithInstructorsDTO() {
+    public CourseWithInstructorsDTO toCourseWithInstructorsDTO() {
         // Make new DTO 
-        CourseWithInstructors dto = new CourseWithInstructors();
+        CourseWithInstructorsDTO dto = new CourseWithInstructorsDTO();
 
         // Populate fields
         dto = fillInBasicInfo(dto);

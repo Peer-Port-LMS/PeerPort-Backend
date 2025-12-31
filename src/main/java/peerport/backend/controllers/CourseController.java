@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.groups.Default;
 import peerport.backend.dto.CourseDTO;
 import peerport.backend.dto.CourseWithAllDetailsDTO;
+import peerport.backend.dto.CourseWithInstructorsDTO;
 import peerport.backend.model.CourseModel;
 import peerport.backend.model.FileModel;
 import peerport.backend.model.UserModel;
@@ -53,13 +54,18 @@ public class CourseController {
     // Get all courses
     @GetMapping
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN)")
-    public ResponseEntity<List<CourseDTO>> getAllCourses() {
-        // Get all courses
-        List<CourseModel> courses = courseService.getAllCourses();
+    public ResponseEntity<List<CourseWithInstructorsDTO>> getAllCourses() {
+        try {
+            // Get all courses
+            List<CourseWithInstructorsDTO> courses = courseService.getAllCourses();
 
-        // Convert courses to DTOs
-        List<CourseDTO> courseDTOs = courses.stream().map(CourseModel::toDTO).toList();
-        return ResponseEntity.ok(courseDTOs);
+            // Convert courses to DTOs
+            return ResponseEntity.ok(courses);
+
+        // Catch illegal argument exception
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
     }
 
     // Get course by ID

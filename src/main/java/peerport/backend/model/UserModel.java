@@ -140,6 +140,14 @@ public class UserModel {
         this.providerId = providerId;
     }
 
+    public boolean addEnrollment(EnrollmentModel enrollment) {
+        return this.enrollments.add(enrollment);
+    }
+
+    public List<EnrollmentModel> getEnrollments() {
+        return enrollments;
+    }
+
     public List<CourseModel> getTaughtCourses() {
         return instructedCourses;
     }
