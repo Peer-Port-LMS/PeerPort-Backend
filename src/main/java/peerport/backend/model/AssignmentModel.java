@@ -156,6 +156,9 @@ public class AssignmentModel {
         dto.description = this.description;
         dto.visible = this.visible;
         dto.dueDate = this.dueDate;
+        dto.courseId = this.course.getCourseId();
+        dto.dateCreated = this.dateCreated;
+        dto.dateUpdated = this.dateUpdated;
 
         // Return the dto
         return dto;
