@@ -1,5 +1,6 @@
 package peerport.backend.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -9,10 +10,15 @@ import org.springframework.stereotype.Service;
 import peerport.backend.database.AssignmentsRepository;
 import peerport.backend.model.AssignmentModel;
 import peerport.backend.model.CourseModel;
+import peerport.backend.model.UserModel;
+import peerport.backend.model.RoleModel.Role;
 
 @Service
 public class AssignmentService {
     
+    @Autowired
+    private AuthService authService;
+
     @Autowired
     private AssignmentsRepository assignmentRepository;
 
@@ -33,8 +39,32 @@ public class AssignmentService {
     }
 
     // Get all assignments
-    public List<AssignmentModel> getAllAssignments() {
-        return assignmentRepository.findAll();
+    public List<AssignmentModel> getAllAssignments() throws IllegalArgumentException {
+        // Get the users role
+        Optional<UserModel> userOpt = authService.getCurrentUser();
+
+        // Check if the user is authenticated
+        if (userOpt.isEmpty()) {
+            throw new IllegalArgumentException("User not authenticated");
+        }
+        UserModel user = userOpt.get();
+
+        // Check user role
+        if (user.getRole() == Role.ADMIN) {
+            return assignmentRepository.findAll();
+        }
+
+        // Get all courses the user is in
+        CourseModel[] courses = courseService.getAllCourses().toArray(new CourseModel[0]);
+
+        // Get all the assignments for those courses
+        List<AssignmentModel> assignments = new ArrayList<>();
+        for (CourseModel course: courses) {
+            assignments.addAll(course.getAssignments());
+        }
+
+        // Return the assignments
+        return assignments;
     }
 
     // Get assignment by ID

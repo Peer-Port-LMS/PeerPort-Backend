@@ -178,6 +178,22 @@ public class CourseModel {
         return false;
     }
 
+    public boolean addAnnouncement(AnnouncementModel announcement) {
+        return this.announcements.add(announcement);
+    }
+
+    public List<AnnouncementModel> getAnnouncements() {
+        return announcements;
+    }
+
+    public boolean addAssignment(AssignmentModel assignment) {
+        return this.assignments.add(assignment);
+    }
+
+    public List<AssignmentModel> getAssignments() {
+        return assignments;
+    }
+
     public FileModel getImage() {
         return image;
     }

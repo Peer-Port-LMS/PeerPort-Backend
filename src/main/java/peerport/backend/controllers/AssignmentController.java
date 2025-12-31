@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import peerport.backend.dto.AssignmentDTO;
+import peerport.backend.dto.AssignmentWithCourseDTO;
 import peerport.backend.model.AssignmentModel;
 import peerport.backend.service.AssignmentService;
 
@@ -29,13 +30,13 @@ public class AssignmentController {
 	private AssignmentService assignmentService;
 
 	@GetMapping
-	public ResponseEntity<List<AssignmentDTO>> getAllAssignments() {
+	public ResponseEntity<List<AssignmentWithCourseDTO>> getAllAssignments() {
 		// Get all assignments
 		List<AssignmentModel> assignments = assignmentService.getAllAssignments();
 
 		// Convert to DTOs
-		List<AssignmentDTO> assignmentDTOs = assignments.stream()
-				.map(AssignmentModel::toDTO)
+		List<AssignmentWithCourseDTO> assignmentDTOs = assignments.stream()
+				.map(AssignmentModel::toAssignmentWithCourseDTO)
 				.toList();
 		
 		// Return the list of DTOs

@@ -17,6 +17,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import peerport.backend.dto.AssignmentDTO;
+import peerport.backend.dto.AssignmentWithCourseDTO;
 
 @Entity
 @Table(name="\"Assignments\"")
@@ -146,10 +147,7 @@ public class AssignmentModel {
 
 
     // Conver to DTO
-    public AssignmentDTO toDTO() {
-        // Create a new DTO
-        AssignmentDTO dto = new AssignmentDTO();
-
+    public <T extends AssignmentDTO> T baseFill(T dto) {
         // Fill in the fields
         dto.assignmentId = this.assignmentId;
         dto.name = this.name;
@@ -159,6 +157,31 @@ public class AssignmentModel {
         dto.courseId = this.course.getCourseId();
         dto.dateCreated = this.dateCreated;
         dto.dateUpdated = this.dateUpdated;
+        
+        // Return the dto
+        return dto;
+    }
+
+    public AssignmentDTO toDTO() {
+        // Create a new DTO
+        AssignmentDTO dto = new AssignmentDTO();
+
+        // Fill in the fields
+        dto = baseFill(dto);
+
+        // Return the dto
+        return dto;
+    }
+
+    public AssignmentWithCourseDTO toAssignmentWithCourseDTO() {
+        // Create new DTO
+        AssignmentWithCourseDTO dto = new AssignmentWithCourseDTO();
+
+        // Fill in the base fields
+        dto = baseFill(dto);
+
+        // Fill in the course field
+        dto.course = this.course.toDTO();
 
         // Return the dto
         return dto;
