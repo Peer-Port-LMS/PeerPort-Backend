@@ -1,5 +1,5 @@
 package peerport.backend.dto;
 
-public class CourseWithInstructors extends CourseDTO {
+public class CourseWithInstructorsDTO extends CourseDTO {
     public UserDTO[] instructors;
 }
