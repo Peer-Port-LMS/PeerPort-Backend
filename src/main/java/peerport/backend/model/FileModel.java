@@ -36,6 +36,7 @@ public class FileModel {
     @Column(name="\"contentType\"", nullable=false)
     private String contentType;
 
+    @Column(name="\"url\"", nullable=true)
     private String url;
 
     @CreationTimestamp
@@ -51,7 +52,7 @@ public class FileModel {
     private CourseModel course;
 
     @ManyToOne
-    @JoinColumn(name="\"files\"", nullable=false)
+    @JoinColumn(name="\"files\"")
     private ContentModel content;
 
 
