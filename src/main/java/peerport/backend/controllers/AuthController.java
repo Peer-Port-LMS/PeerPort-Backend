@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import peerport.backend.dto.UserDTO;
-import peerport.backend.enums.ResponseCodes;
 import peerport.backend.service.AuthService;
 
 /**
@@ -41,7 +40,7 @@ public class AuthController {
         
         // Check if user is exists
         if (!user.isPresent()) {
-            return ResponseEntity.status(ResponseCodes.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
         // Return the user
