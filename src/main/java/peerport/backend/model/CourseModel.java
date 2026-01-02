@@ -71,8 +71,8 @@ public class CourseModel {
     @ManyToMany
     @JoinTable(
         name="\"CourseInstructors\"",
-        joinColumns={@JoinColumn(name = "\"courseId\"")},
-        inverseJoinColumns={@JoinColumn(name = "\"userId\"")}  
+        joinColumns=@JoinColumn(name="\"courseId\""),
+        inverseJoinColumns=@JoinColumn(name="\"userId\"")
     )
     private List<UserModel> instructors = new ArrayList<>();
 

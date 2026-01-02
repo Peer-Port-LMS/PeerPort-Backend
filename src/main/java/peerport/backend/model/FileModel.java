@@ -10,8 +10,11 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import peerport.backend.dto.FileDTO;
 
 @Entity
 @Table(name="\"Files\"")
@@ -46,6 +49,10 @@ public class FileModel {
     // Connections
     @OneToOne(mappedBy="image", orphanRemoval=true)
     private CourseModel course;
+
+    @ManyToOne
+    @JoinColumn(name="\"files\"", nullable=false)
+    private ContentModel content;
 
 
     // Default constructor
@@ -112,5 +119,22 @@ public class FileModel {
 
     public void setDateUpdated(Date dateUpdated) {
         this.dateUpdated = dateUpdated;
+    }
+
+
+    // DTO Methods
+    public FileDTO toDTO() {
+        // Create a new DTO instance
+        FileDTO dto = new FileDTO();
+
+        // Fill in the fields
+        dto.fileId = this.fileId;
+        dto.fileName = this.fileName;
+        dto.url = this.url;
+        dto.contentType = this.contentType;
+        dto.fileType = this.fileType;
+
+        // Return the DTO
+        return dto;
     }
 }
