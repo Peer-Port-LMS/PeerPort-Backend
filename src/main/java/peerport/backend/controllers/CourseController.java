@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.groups.Default;
 import peerport.backend.dto.CourseDTO;
+import peerport.backend.dto.ErrorDTO;
 import peerport.backend.dto.CourseWithAllDetailsDTO;
 import peerport.backend.dto.CourseWithInstructorsDTO;
 import peerport.backend.model.CourseModel;
@@ -80,17 +81,42 @@ public class CourseController {
     // Create new course - Only takes formData add JSON option later
     @PostMapping
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
-    public ResponseEntity<CourseDTO> createCourse(
+    public ResponseEntity<?> createCourse(
         // Form data
-        @Validated({OnCreate.class, Default.class}) @RequestPart(value="course", required=false) CourseModel courseFromForm,
-        @RequestPart(value="image", required=false) MultipartFile image
+        @Validated({OnCreate.class, Default.class}) @RequestPart(value="course", required=false)  String courseJsonFromForm,
+        @RequestPart(value="image", required=true) MultipartFile image
     ) {
         // Get the course from either FormData or JSON body
-        CourseModel course = courseFromForm;
+        CourseModel course;
+
+        // Try to parse the course JSON from form data
+        try {
+            // Convert json to CourseModel object
+            CourseModel courseFromForm = courseJsonFromForm != null ?
+                    objectMapper.readValue(courseJsonFromForm, CourseModel.class) : null;
+
+            if (courseFromForm != null) {
+                course = courseFromForm;
+            } else {
+                course = null;
+            }
+
+        // Catch JSON parsing exceptions
+        } catch (JacksonException e) {
+            ErrorDTO error = new ErrorDTO(
+                HttpStatus.BAD_REQUEST.value(), 
+                "Invalid JSON format for course data",
+                "POST /courses");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        }
         
         // Validate that course data was provided
         if (course == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+            ErrorDTO error = new ErrorDTO(
+                HttpStatus.BAD_REQUEST.value(), 
+                "Course data is required given: ",
+                "POST /courses");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
 
         // Get the current user
@@ -98,44 +124,61 @@ public class CourseController {
 
         // Check if the user is present
         if (!currentUser.isPresent()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            ErrorDTO error = new ErrorDTO(
+                HttpStatus.UNAUTHORIZED.value(), 
+                "Unauthorized: User not found",
+                "POST /courses");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
         }
 
         // Validate the image
         if (image != null && image.getSize() > fileUploadSizeLimit) { // 5MB limit
-            // TODO: Return specific error message
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+            ErrorDTO error = new ErrorDTO(
+                HttpStatus.BAD_REQUEST.value(), 
+                "Image file size exceeds the limit of " + fileUploadSizeLimit + " bytes",
+                "POST /courses");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
         }
 
-        try {
-            // Add the user as an instructor before saving
-            course.addInstructor(currentUser.get());
-            
-            // Create the course once
-            CourseModel savedCourse = courseService.createCourse(course);
+        // Add the user as an instructor before saving
+        course.addInstructor(currentUser.get());
         
-            // Save the image if needed
-            if (image != null) {
-                try {
-                    FileModel savedCourseImage = fileService.saveCourseImage(image, savedCourse.getCourseId());
-                    savedCourse.setImage(savedCourseImage);
-                    // Update course with image reference
-                    savedCourse = courseService.updateCourse(savedCourse.getCourseId(), savedCourse);
-                } catch (IOException e) {
-                    // If image save fails, delete the created course to avoid orphans
-                    courseService.deleteCourse(savedCourse.getCourseId());
-                    throw e;
-                }
+        // Create the course once
+        CourseModel savedCourse = courseService.createCourse(course);
+    
+        // Save the image if needed
+        if (image != null) {
+            try {
+                FileModel savedCourseImage = fileService.saveCourseImage(image, savedCourse.getCourseId());
+                savedCourse.setImage(savedCourseImage);
+
+                // Update course with image reference
+                savedCourse = courseService.updateCourse(savedCourse.getCourseId(), savedCourse);
+            } catch (IOException e) {
+                // If image save fails, delete the created course to avoid orphans
+                courseService.deleteCourse(savedCourse.getCourseId());
+
+                // Make an error response
+                ErrorDTO error = new ErrorDTO(
+                    HttpStatus.INTERNAL_SERVER_ERROR.value(), 
+                    "Failed to save course image: " + e.getMessage(),
+                    "POST /courses");
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+            } catch (IllegalArgumentException e) {
+                // If image save fails, delete the created course to avoid orphans
+                courseService.deleteCourse(savedCourse.getCourseId());
+
+                // Make an error response
+                ErrorDTO error = new ErrorDTO(
+                    HttpStatus.BAD_REQUEST.value(), 
+                    "Invalid image file: " + e.getMessage(),
+                    "POST /courses");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
             }
-
-            // Return the created course
-            return ResponseEntity.status(HttpStatus.CREATED).body(savedCourse.toDTO());
-
-        // Catch IO exceptions
-        } catch (IOException e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
+
+        // Return the created course
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedCourse.toDTO());
     }
 
     // Update course - Only takes formData add JSON option later
