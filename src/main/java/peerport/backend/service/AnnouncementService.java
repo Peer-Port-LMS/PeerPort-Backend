@@ -1,13 +1,20 @@
 package peerport.backend.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import jakarta.transaction.Transactional;
 import peerport.backend.database.AnnouncementsRepository;
+import peerport.backend.exceptions.announcements.AnnouncementNotFoundException;
+import peerport.backend.exceptions.users.UserNotAuthorizedException;
 import peerport.backend.model.AnnouncementModel;
+import peerport.backend.model.CourseModel;
+import peerport.backend.model.RoleModel.Role;
+import peerport.backend.model.UserModel;
 
 @Service
 public class AnnouncementService {
@@ -18,85 +25,199 @@ public class AnnouncementService {
     @Autowired
     private CourseService courseService;
 
-    // Create Announcment
-    public AnnouncementModel createAnnouncement(String courseId, AnnouncementModel announcement) throws IllegalArgumentException {
-        // Get the course by ID
-        var courseOpt = courseService.getCourseById(courseId);
-        if (courseOpt.isEmpty()) {
-            throw new IllegalArgumentException("Course with ID " + courseId + " not found.");
-        }
+    @Autowired
+    private AuthService authService;
+
+    /**
+     * Create announcement
+     * 
+     * @param courseId - ID of the course to create the announcement for
+     * @param announcement - AnnouncementModel to create
+     * @return The created AnnouncementModel
+     * @throws CourseNotFoundException if course not found (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthorizedException if user is not authorized to edit (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
+     */
+    @Transactional
+    public AnnouncementModel createAnnouncement(String courseId, AnnouncementModel announcement) {
+        // Get the course
+        CourseModel course = courseService.getCourseById(courseId);
+
+        // Check if the user is allowed to edit the course
+        courseService.userAllowedToEditCourse(course);
 
         // Set the course to the announcement
-        announcement.setCourse(courseOpt.get());
+        announcement.setCourse(course);
 
         // Save the announcement
         return announcementsRepository.save(announcement);
     }
 
-    // Get all announcements
+    /**
+     * Get all announcements
+     * 
+     * @return List of AnnouncementModels
+     */
     public List<AnnouncementModel> getAllAnnouncements() {
-        return announcementsRepository.findAll();
+        // Get the current users role
+        UserModel user = authService.getCurrentUser();
+        Role role = user.getRole();
+
+        // If admin, return all announcements
+        if (role == Role.ADMIN) {
+            return announcementsRepository.findAll();
+        }
+
+        // Get all the courses for the user 
+        // (Filtering is done in CourseService based on role)
+        List<CourseModel> courses = courseService.getAllCourses();
+
+        // Get all the announcements for those courses
+        List<AnnouncementModel> allAnnouncements = new ArrayList<>();
+        for (CourseModel course : courses) {
+            allAnnouncements.addAll(course.getAnnouncements());
+        }
+
+        // Return the announcements
+        return allAnnouncements;
     }
 
-    // Get announcement by ID
-    public Optional<AnnouncementModel> getAnnouncementById(String announcementId) {
-        return announcementsRepository.findById(announcementId);
-    }
-
-    // Update announcement
-    public AnnouncementModel updateAnnouncement(String announcementId, AnnouncementModel updatedAnnouncement) throws IllegalArgumentException {
-        // Get the ancouncement by ID
+    /**
+     * Get announcement by ID
+     * 
+     * @param announcementId - ID of the announcement to get
+     * @return The AnnouncementModel
+     * @throws AnnouncementNotFoundException if announcement not found (Handled in GlobalExceptionHandler)
+     */
+    public AnnouncementModel getAnnouncementById(String announcementId) {
+        // Get the announcement by ID
         Optional<AnnouncementModel> announcement = announcementsRepository.findById(announcementId);
 
-        // Check if the announcment exists
+        // Check if its empty
         if (announcement.isEmpty()) {
-            throw new IllegalArgumentException("Announcement with ID " + announcementId + " not found.");
+            throw new AnnouncementNotFoundException("Announcement with ID " + announcementId + " not found.");
         }
+
+        // Return the announcement
+        return announcement.get();
+    }
+
+    /**
+     * Update announcement
+     * 
+     * @param announcementId - ID of the announcement to update
+     * @param updatedAnnouncement - AnnouncementModel with updated fields
+     * @return The updated AnnouncementModel
+     * @throws AnnouncementNotFoundException if announcement not found (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthorizedException if user is not authorized to edit (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler
+     */
+    @Transactional
+    public AnnouncementModel updateAnnouncement(String announcementId, AnnouncementModel updatedAnnouncement) {
+        // Get the announcement by ID
+        AnnouncementModel announcement = getAnnouncementById(announcementId);
         
+        // Check if the user is allowed to edit the announcement
+        userAllowedToEditAnnouncement(announcement);
+
         // Update the announcement
-        AnnouncementModel existingAnnouncement = announcement.get();
-        existingAnnouncement.setTitle(updatedAnnouncement.getTitle());
-        existingAnnouncement.setContent(updatedAnnouncement.getContent());
+        announcement.setTitle(updatedAnnouncement.getTitle());
+        announcement.setContent(updatedAnnouncement.getContent());
 
         // Update the announcement in the database
-        announcementsRepository.save(existingAnnouncement);
+        announcementsRepository.save(announcement);
 
         // Return the updated announcement
-        return existingAnnouncement;
+        return announcement;
     }
     
-    // Patch / parrtial update announcement
-    public AnnouncementModel patchAnnouncement(String announcementId, AnnouncementModel patchedAnnouncement) throws IllegalArgumentException {
-        // Get the ancouncement by ID
-        Optional<AnnouncementModel> announcement = announcementsRepository.findById(announcementId);
-
-        // Check if the announcment exists
-        if (announcement.isEmpty()) {
-            throw new IllegalArgumentException("Announcement with ID " + announcementId + " not found.");
-        }
+    /**
+     * Patch announcement
+     * 
+     * @param announcementId - ID of the announcement to patch
+     * @param patchedAnnouncement - AnnouncementModel with fields to patch
+     * @return The patched AnnouncementModel
+     * @throws AnnouncementNotFoundException if announcement not found (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthorizedException if user is not authorized to edit (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
+     */
+    @Transactional
+    public AnnouncementModel patchAnnouncement(String announcementId, AnnouncementModel patchedAnnouncement) {
+        // Get the announcement by ID
+        AnnouncementModel announcement = getAnnouncementById(announcementId);
         
+        // Check if the user is allowed to edit the announcement
+        userAllowedToEditAnnouncement(announcement);
+
         // Patch the announcement
-        AnnouncementModel existingAnnouncement = announcement.get();
         if (patchedAnnouncement.getTitle() != null) {
-            existingAnnouncement.setTitle(patchedAnnouncement.getTitle());
+            announcement.setTitle(patchedAnnouncement.getTitle());
         }
         if (patchedAnnouncement.getContent() != null) {
-            existingAnnouncement.setContent(patchedAnnouncement.getContent());
+            announcement.setContent(patchedAnnouncement.getContent());
         }
 
         // Update the announcement in the database
-        announcementsRepository.save(existingAnnouncement);
+        announcementsRepository.save(announcement);
 
         // Return the updated announcement
-        return existingAnnouncement;
+        return announcement;
     }
 
-    // Delete announcement
-    public boolean deleteAnnouncement(String announcementId) {
-        if (announcementsRepository.existsById(announcementId)) {
-            announcementsRepository.deleteById(announcementId);
-            return true;
-        }
-        return false;
+    /**
+     * Delete announcement by ID
+     * 
+     * @param announcementId
+     * @throws AnnouncementNotFoundException if announcement not found (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthorizedException if user is not authorized to delete (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
+     */
+    @Transactional
+    public void deleteAnnouncement(String announcementId) {
+        // Check if the user is allowed to delete the announcement
+        // This will also check if the announcement exists
+        userAllowedToEditAnnouncement(announcementId);
+
+        // Delete the announcement
+        announcementsRepository.deleteById(announcementId);
+    }
+
+
+    // Helpers //
+    /**
+     * Check if user is allowed to edit announcement
+     * 
+     * @param announcement - AnnouncementModel to check
+     * @throws UserNotAuthorizedException if user is not authorized to edit (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
+     */
+    public void userAllowedToEditAnnouncement(AnnouncementModel announcement) {
+        // Get the current user
+        UserModel currentUser = authService.getCurrentUser();
+
+        // Check if the user is admin
+        if (currentUser.getRole() == Role.ADMIN) return;
+
+        // Check if the user is an instructor for the course
+        if (announcement.getCourse().getInstructors().contains(currentUser)) return;
+
+        // If not, throw exception
+        throw new UserNotAuthorizedException("User is not authorized to edit announcement with ID: " + announcement.getAnnouncementId());
+    }
+
+    /**
+     * Check if user is allowed to edit announcement by ID
+     * 
+     * @param announcementId - ID of the announcement to check
+     * @throws AnnouncementNotFoundException if announcement not found (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthorizedException if user is not authorized to edit (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
+     */
+    public void userAllowedToEditAnnouncement(String announcementId) {
+        // Get the announcement
+        AnnouncementModel announcement = getAnnouncementById(announcementId);
+
+        // Check if user is allowed to edit
+        userAllowedToEditAnnouncement(announcement);
     }
 }
