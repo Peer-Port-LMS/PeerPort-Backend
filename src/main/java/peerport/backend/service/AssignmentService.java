@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import peerport.backend.database.AssignmentsRepository;
+import peerport.backend.exceptions.assignments.AssignmentNotFoundException;
 import peerport.backend.model.AssignmentModel;
 import peerport.backend.model.CourseModel;
 import peerport.backend.model.UserModel;
@@ -61,8 +62,14 @@ public class AssignmentService {
     }
 
     // Get assignment by ID
-    public Optional<AssignmentModel> getAssignmentById(String assignmentId) {
-        return assignmentRepository.findById(assignmentId);
+    public AssignmentModel getAssignmentById(String assignmentId) {
+        // Get the assignment by ID
+        Optional<AssignmentModel> assignment = assignmentRepository.findById(assignmentId);
+
+        // Check if the assignment exists or not
+        if (assignment.isEmpty()) {
+            throw new AssignmentNotFoundException(assignmentId);
+        }
     }
 
     // Update assignment
@@ -115,11 +122,25 @@ public class AssignmentService {
     }
 
     // Delete assignment
-    public boolean deleteAssignment(String assignmentId) {
-        if (assignmentRepository.existsById(assignmentId)) {
-            assignmentRepository.deleteById(assignmentId);
-            return true;
-        }
-        return false;
+    public void deleteAssignment(String assignmentId) {
+        // Check if the user is authorized to delete the assignment
+
+        // Delete the assignment by ID
+        assignmentRepository.deleteById(assignmentId);
+    }
+
+
+    // Helpers //
+    private void userAllowedToEditAssignment(AssignmentModel assignment) {
+        // Check if user is allowed to edit the assignment
+        courseService.userAllowedToEditCourse(assignment.getCourse());
+    }
+
+    private void userAllowedToEditAssignment(String assignmentId) {
+        // Get the assignment by ID
+        AssignmentModel assignment = getAssignmentById(assignmentId);
+
+        // Check if user is allowed to edit the assignment
+        userAllowedToEditAssignment(assignment);
     }
 }
