@@ -1,9 +1,12 @@
 package peerport.backend.model;
 
+import java.io.IOException;
 import java.util.Date;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,8 +16,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.PreRemove;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import peerport.backend.dto.FileDTO;
+import peerport.backend.service.FileService;
 
 @Entity
 @Table(name="\"Files\"")
@@ -36,9 +42,6 @@ public class FileModel {
     @Column(name="\"contentType\"", nullable=false)
     private String contentType;
 
-    @Column(name="\"url\"", nullable=true)
-    private String url;
-
     @CreationTimestamp
     @Column(name="\"dateCreated\"")
     private Date dateCreated = new Date();
@@ -55,6 +58,17 @@ public class FileModel {
     @JoinColumn(name="\"files\"")
     private ContentModel content;
 
+    // Environment variables (ignored by JPA)
+    @Transient
+    @Value("${server.hosting-url}")
+    private String serverUrl;
+
+    @Transient
+    private static String filesEndpoint = "files";
+
+    @Transient
+    @Autowired
+    private FileService fileService;
 
     // Default constructor
     public FileModel() { }
@@ -102,14 +116,6 @@ public class FileModel {
         this.contentType = contentType;
     }
 
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
     public Date getDateCreated() {
         return dateCreated;
     }
@@ -123,6 +129,11 @@ public class FileModel {
     }
 
 
+    public String getUrl() {
+        return serverUrl + "/" + filesEndpoint + "/" + fileId;
+    }
+
+
     // DTO Methods
     public FileDTO toDTO() {
         // Create a new DTO instance
@@ -131,11 +142,26 @@ public class FileModel {
         // Fill in the fields
         dto.fileId = this.fileId;
         dto.fileName = this.fileName;
-        dto.url = this.url;
+        dto.url = this.serverUrl + "/" + FileModel.filesEndpoint + "/" + this.fileId;
         dto.contentType = this.contentType;
         dto.fileType = this.fileType;
 
         // Return the DTO
         return dto;
+    }
+
+
+    // Pre removal hook
+    @PreRemove
+    public void deletePhysicalFile() {
+        try {
+            // Use FileService to delete the physical file
+            fileService.deleteFile(this);
+
+        // Catch any IO exceptions
+        } catch (IOException e) {
+            // Log the error
+            System.err.println("Failed to delete physical file: " + e.getMessage());
+        }
     }
 }

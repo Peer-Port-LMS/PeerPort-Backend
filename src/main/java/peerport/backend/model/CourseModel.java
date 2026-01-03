@@ -85,7 +85,7 @@ public class CourseModel {
     @OneToMany(mappedBy="course", cascade=CascadeType.ALL)
     private List<ContentModel> content = new ArrayList<>();
 
-    @OneToOne
+    @OneToOne(orphanRemoval=true)
     private FileModel image;
 
     // Default constructor
