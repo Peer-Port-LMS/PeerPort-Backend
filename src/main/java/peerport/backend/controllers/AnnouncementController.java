@@ -29,7 +29,12 @@ public class AnnouncementController {
     @Autowired
     private AnnouncementService announcementService;
 
-    // Get all announcements
+    /**
+     * Get all announcements
+     * 
+     * @return List of AnnouncementDTO
+     * @throws UserNotAuthenticatedException If the user is not authenticated to perform this action
+     */
     @GetMapping
     public ResponseEntity<List<AnnouncementDTO>> getAllAnnouncements() {
         // Get all announcements
@@ -50,6 +55,8 @@ public class AnnouncementController {
      * 
      * @param announcementId - ID of the announcement to get
      * @return The AnnouncementModel
+     * @throws AnnouncementNotFoundException If the announcement with the given ID does not exist
+     * @throws UserNotAuthenticatedException If the user is not authenticated to perform this action
      */
     @GetMapping("/{announcementId}")
     public ResponseEntity<AnnouncementDTO> getAnnouncementById(@PathVariable String announcementId) {
@@ -66,6 +73,9 @@ public class AnnouncementController {
      * @param courseId - ID of the course to create the announcement for
      * @param announcementModel - AnnouncementModel to create
      * @return The created AnnouncementModel
+     * @throws CourseNotFoundException If the course with the given ID does not exist
+     * @throws UserNotAuthenticatedException If the user is not authenticated to perform this action
+     * @throws UserNotAuthorizedException If the user is not authorized to create this announcement
      */
     @PostMapping("/{courseId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
@@ -83,6 +93,9 @@ public class AnnouncementController {
      * @param announcementId - ID of the announcement to update
      * @param updatedAnnouncement - AnnouncementModel with updated fields
      * @return The updated AnnouncementModel
+     * @throws AnnouncementNotFoundException If the announcement with the given ID does not exist
+     * @throws UserNotAuthenticatedException If the user is not authenticated to perform this action
+     * @throws UserNotAuthorizedException If the user is not authorized to update this announcement
      */
     @PutMapping("/{announcementId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
@@ -100,6 +113,9 @@ public class AnnouncementController {
      * @param announcementId - ID of the announcement to patch
      * @param patchedAnnouncement - AnnouncementModel with fields to patch
      * @return The patched AnnouncementModel
+     * @throws AnnouncementNotFoundException If the announcement with the given ID does not exist
+     * @throws UserNotAuthenticatedException If the user is not authenticated to perform this action
+     * @throws UserNotAuthorizedException If the user is not authorized to patch this announcement
      */
     @PatchMapping("/patch/{announcementId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
@@ -116,6 +132,9 @@ public class AnnouncementController {
      * 
      * @param announcementId - ID of the announcement to delete
      * @return ResponseEntity with no content
+     * @throws AnnouncementNotFoundException If the announcement with the given ID does not exist
+     * @throws UserNotAuthenticatedException If the user is not authenticated to perform this action
+     * @throws UserNotAuthorizedException If the user is not authorized to delete this announcement
      */
     @DeleteMapping("/delete/{announcementId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
