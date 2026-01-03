@@ -1,11 +1,11 @@
 package peerport.backend.controllers;
 
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +22,9 @@ import peerport.backend.dto.AssignmentWithCourseDTO;
 import peerport.backend.model.AssignmentModel;
 import peerport.backend.service.AssignmentService;
 
+/**
+ * Controller for handling assignment-related endpoints
+ */
 @RestController
 @RequestMapping("/assignments")
 public class AssignmentController {
@@ -29,90 +32,119 @@ public class AssignmentController {
 	@Autowired
 	private AssignmentService assignmentService;
 
+	/**
+	 * Get all assignments.
+	 * 
+	 * @return List of AssignmentWithCourseDTO
+	 * @throws UserNotAuthenticatedException if the user is not authenticated to perform this action.
+	 */
 	@GetMapping
 	public ResponseEntity<List<AssignmentWithCourseDTO>> getAllAssignments() {
-		try {
-			// Get all assignments
-			List<AssignmentModel> assignments = assignmentService.getAllAssignments();
+		// Get all assignments
+		List<AssignmentModel> assignments = assignmentService.getAllAssignments();
 
-			// Convert to DTOs
-			List<AssignmentWithCourseDTO> assignmentDTOs = assignments.stream()
-					.map(AssignmentModel::toAssignmentWithCourseDTO)
-					.toList();
-			
-			// Return the list of DTOs
-			return ResponseEntity.ok(assignmentDTOs);
-
-		// Catch illegal argument exception
-		} catch (IllegalArgumentException e) {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-		}
+		// Convert to DTOs
+		List<AssignmentWithCourseDTO> assignmentDTOs = assignments.stream()
+				.map(AssignmentModel::toAssignmentWithCourseDTO)
+				.toList();
+		
+		// Return the list of DTOs
+		return ResponseEntity.ok(assignmentDTOs);
 	}
 
+	/**
+	 * Get an assignment by its ID.
+	 * 
+	 * @param assignmentId The ID of the assignment to retrieve.
+	 * @return The assignment with the given ID.
+	 * @throws AssignmentNotFoundException if the assignment with the given ID does not exist.
+	 * @throws UserNotAuthenticatedException if the user is not authenticated to perform this action.
+	 * @throws UserNotAuthorizedException if the user is not authorized to view this assignment.
+	 */
 	@GetMapping("/{assignmentId}")
 	public ResponseEntity<AssignmentDTO> getAssignmentById(@PathVariable String assignmentId) {
 		// Get assignment by ID
-		Optional<AssignmentModel> assignment = assignmentService.getAssignmentById(assignmentId);
-
-		// Check if assignment exsits
-		if (assignment.isEmpty()) {
-			return ResponseEntity.notFound().build();
-		}
+		AssignmentModel assignment = assignmentService.getAssignmentById(assignmentId);
 
 		// Convert assignment to DTO and return
-		return ResponseEntity.ok(assignment.get().toDTO());
+		return ResponseEntity.ok(assignment.toDTO());
 	}
 
+	/**
+	 * Create a new assignment for a course.
+	 * 
+	 * @param courseId The ID of the course to which the assignment belongs.
+	 * @param assignment The assignment data to create.
+	 * @return The created assignment.
+	 * @throws CourseNotFoundException if the course with the given ID does not exist.
+	 * @throws UserNotAuthenticatedException if the user is not authenticated to perform this action.
+	 * @throws UserNotAuthorizedException if the user is not authorized to create an assignment for this course.
+	 */
 	@PostMapping("/{courseId}")
+	@PreAuthorize("@authservice.hasAnyRole(@authservice.ADMIN, @authservice.INSTRUCTOR)")
 	public ResponseEntity<AssignmentDTO> createAssignment(@PathVariable String courseId, @Validated @RequestBody AssignmentModel assignment) {
-		try {
-			// Try to create the assignment
-			AssignmentModel savedAssignment = assignmentService.createAssignment(assignment, courseId);
+		// Try to create the assignment
+		AssignmentModel savedAssignment = assignmentService.createAssignment(assignment, courseId);
 
-			// Return the created assignment with 201 status
-			return ResponseEntity.status(HttpStatus.CREATED).body(savedAssignment.toDTO());
-		
-		// Catch illegal argument exception
-		} catch (IllegalArgumentException e) {
-			return ResponseEntity.notFound().build();
-		}
+		// Return the created assignment with 201 status
+		return ResponseEntity.status(HttpStatus.CREATED).body(savedAssignment.toDTO());
 	}
 
+	/**
+	 * Update an assignment by its ID.
+	 * 
+	 * @param assignmentId The ID of the assignment to update.
+	 * @param assignment The assignment data to update.
+	 * @return The updated assignment.
+	 * @throws AssignmentNotFoundException if the assignment with the given ID does not exist.
+	 * @throws UserNotAuthenticatedException if the user is not authenticated to perform this action.
+	 * @throws UserNotAuthorizedException if the user is not authorized to update this assignment.
+	 */
 	@PutMapping("/{assignmentId}")
+	@PreAuthorize("@authservice.hasAnyRole(@authservice.ADMIN, @authservice.INSTRUCTOR)")
 	public ResponseEntity<AssignmentDTO> updateAssignment(@PathVariable String assignmentId, @RequestBody AssignmentModel assignment) {
 		// Update the assignment
-		Optional<AssignmentModel> updatedAssignment = assignmentService.updateAssignment(assignmentId, assignment);
-
-		// Check if the assignment was found and updated
-		if (updatedAssignment.isEmpty()) {
-			return ResponseEntity.notFound().build();
-		}
+		AssignmentModel updatedAssignment = assignmentService.updateAssignment(assignmentId, assignment);
 
 		// Return the updated assignment as DTO
-		return ResponseEntity.ok(updatedAssignment.get().toDTO());
+		return ResponseEntity.ok(updatedAssignment.toDTO());
 	}
 
+	/**
+	 * Patch an assignment by its ID.
+	 * 
+	 * @param assignmentId The ID of the assignment to patch.
+	 * @param assignment The assignment data to patch.
+	 * @return The patched assignment.
+	 * @throws AssignmentNotFoundException if the assignment with the given ID does not exist.
+	 * @throws UserNotAuthenticatedException if the user is not authenticated to perform this action.
+	 * @throws UserNotAuthorizedException if the user is not authorized to patch this assignment.
+	 */
 	@PatchMapping("/{assignmentId}")
+	@PreAuthorize("@authservice.hasAnyRole(@authservice.ADMIN, @authservice.INSTRUCTOR)")
 	public ResponseEntity<AssignmentDTO> patchAssignment(@PathVariable String assignmentId, @RequestBody AssignmentModel assignment) {
-		try {
-			// Patch the assignment
-			AssignmentModel patchedAssignment = assignmentService.patchAssignment(assignmentId, assignment);
+		// Patch the assignment
+		AssignmentModel patchedAssignment = assignmentService.patchAssignment(assignmentId, assignment);
 
-			// Return the patched assignment as DTO
-			return ResponseEntity.ok(patchedAssignment.toDTO());
-
-		// Handle illegal argument exception
-		} catch (IllegalArgumentException e) {
-			return ResponseEntity.notFound().build();
-		}
+		// Return the patched assignment as DTO
+		return ResponseEntity.ok(patchedAssignment.toDTO());
 	}
 
+	/**
+	 * Delete an assignment by its ID.
+	 * @param assignmentId The ID of the assignment to delete.
+	 * @return A ResponseEntity with no content status if deletion is successful.
+	 * @throws AssignmentNotFoundException if the assignment with the given ID does not exist.
+	 * @throws UserNotAuthenticatedException if the user is not authenticated to perform this action.
+	 * @throws UserNotAuthorizedException if the user is not authorized to delete this assignment.
+	 */
 	@DeleteMapping("/{assignmentId}")
+	@PreAuthorize("@authservice.hasAnyRole(@authservice.ADMIN, @authservice.INSTRUCTOR)")
 	public ResponseEntity<Void> deleteAssignment(@PathVariable String assignmentId) {
-		boolean deleted = assignmentService.deleteAssignment(assignmentId);
-		if (deleted) {
-			return ResponseEntity.noContent().build();
-		}
-		return ResponseEntity.notFound().build();
+		// Delete the assignment
+		assignmentService.deleteAssignment(assignmentId);
+		
+		// Return no content status
+		return ResponseEntity.noContent().build();
 	}
 }
