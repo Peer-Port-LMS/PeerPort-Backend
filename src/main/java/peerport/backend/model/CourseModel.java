@@ -172,10 +172,7 @@ public class CourseModel {
     }
 
     public boolean removeInstructor(UserModel instructor) {
-        if (this.instructors.remove(instructor)) {
-            return true;
-        }
-        return false;
+        return this.instructors.remove(instructor);
     }
 
     public boolean addAnnouncement(AnnouncementModel announcement) {
