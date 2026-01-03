@@ -137,7 +137,7 @@ public class CourseService {
     public CourseModel getCourseById(String courseId) {
         Optional<CourseModel> courseOpt = courseRepository.findById(courseId);
         if (courseOpt.isEmpty()) {
-            throw new CourseNotFoundException("Course not found with ID: " + courseId);
+            throw new CourseNotFoundException(courseId);
         }
         return courseOpt.get();
     }

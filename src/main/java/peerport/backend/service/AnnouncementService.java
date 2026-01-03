@@ -95,7 +95,7 @@ public class AnnouncementService {
 
         // Check if its empty
         if (announcement.isEmpty()) {
-            throw new AnnouncementNotFoundException("Announcement with ID " + announcementId + " not found.");
+            throw new AnnouncementNotFoundException(announcementId);
         }
 
         // Return the announcement
