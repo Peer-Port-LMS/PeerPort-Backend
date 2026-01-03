@@ -1,7 +1,5 @@
 package peerport.backend.controllers;
 
-import java.util.Optional;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -24,7 +22,11 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
-    // Login the user via the specified OAuth2 provider
+    /**
+     * Redirects to the OAuth2 provider's authorization endpoint.
+     * @param provider - The OAuth2 provider (e.g., "google", "github")
+     * @return A redirect response to the provider's authorization endpoint
+     */
     @GetMapping("/login/{provider}")
     public ResponseEntity<Void> login(@PathVariable String provider) {
         HttpHeaders headers = new HttpHeaders();
@@ -32,18 +34,14 @@ public class AuthController {
         return new ResponseEntity<>(headers, HttpStatus.FOUND);
     }
 
-    // Get the authenticated user's info
+    /**
+     * Get the currently logged in user's information.
+     * @return The UserDTO of the currently logged in user
+     */
     @GetMapping("/me")
     public ResponseEntity<UserDTO> me() {
         // Get the logged in user's info from the security context
-        Optional<UserDTO> user = authService.getUser();
-        
-        // Check if user is exists
-        if (!user.isPresent()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        // Return the user
-        return ResponseEntity.ok(user.get());
+        // and return it as a DTO
+        return ResponseEntity.ok(authService.getCurrentUser().toDTO());
     }
 }
