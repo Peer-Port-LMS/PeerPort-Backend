@@ -16,26 +16,37 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
 import peerport.backend.database.UsersRepository;
-import peerport.backend.dto.UserDTO;
+import peerport.backend.exceptions.users.UserNotAuthenticatedException;
+import peerport.backend.exceptions.users.UserNotFoundException;
 import peerport.backend.model.UserModel;
 import peerport.backend.model.RoleModel.Role;
 
+/**
+ * Service for handling authentication and user-related operations
+ */
 @Service
 public class AuthService extends DefaultOAuth2UserService {
 
-    public final Role STUDENT = Role.STUDENT;
-    public final Role INSTRUCTOR = Role.INSTRUCTOR;
-    public final Role ADMIN = Role.ADMIN;
+    public static final Role STUDENT = Role.STUDENT;
+    public static final Role INSTRUCTOR = Role.INSTRUCTOR;
+    public static final Role ADMIN = Role.ADMIN;
     
     @Autowired
     private UsersRepository userRepository;
 
-    // Load the user into the daatabase upon authentication
+
+    // Load the user into the database upon authentication
+    /**
+     * Loads the OAuth2 user and saves/updates them in the database
+     * @param userRequest - The OAuth2 user request
+     * @return The OAuth2User
+     * @throws OAuth2AuthenticationException If there was an error during authentication
+     */
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
         OAuth2User oauth2User = super.loadUser(userRequest);
 
-        // Extrat user info from OAuth2 provider
+        // Extract user info from OAuth2 provider
         String provider = userRequest.getClientRegistration().getRegistrationId();
         String email = oauth2User.getAttribute("email");
         String name = oauth2User.getAttribute("name");
@@ -83,58 +94,84 @@ public class AuthService extends DefaultOAuth2UserService {
         return oauth2User;
     }
 
+
+    // User Authorization Methods //
+    /**
+     * Checks if the current user has the specified role
+     * 
+     * @param role - The role to check
+     * @return True if the user has the role, false otherwise
+     */
     public boolean hasRole(Role role) {
-        Optional<UserModel> user = currentUser();
-        return user.isPresent() &&
-            user.get().getRole() != null &&
-            user.get().getRole().equals(role);
+        UserModel user = getCurrentUser();
+        return user.getRole() != null &&
+            user.getRole().equals(role);
     }
 
+    /**
+     * Checks if the current user has any of the specified roles
+     * 
+     * @param roles - The roles to check
+     * @return True if the user has any of the roles, false otherwise
+     */
     public boolean hasAnyRole(Role... roles) {
         Set<Role> allowed = new HashSet<>(Arrays.asList(roles));
-        Optional<UserModel> user = currentUser();
-        return user.isPresent() &&
-            user.get().getRole() != null &&
-            allowed.contains(user.get().getRole());
+        UserModel user = getCurrentUser();
+        return user.getRole() != null &&
+            allowed.contains(user.getRole());
     }
 
-    public Optional<UserDTO> getUser() {
-        Optional<UserModel> user = currentUser();
-        if (user.isPresent()) {
-            return Optional.of(user.get().toDTO());
-        } else {
-            return Optional.empty();
-        }
-    }
 
-    public Optional<UserModel> getCurrentUser() {
-        return currentUser();
-    }
-
-    // Get the currently authenticated user
-    private Optional<UserModel> currentUser() {
+    // User Retrieval Methods //
+    /**
+     * Gets the current authenticated user as a UserModel
+     * 
+     * @return The UserModel of the current user
+     * @throws UserNotAuthenticatedException If the user is not authenticated (Handled in GlobalExceptionHandler)
+     * @throws UserNotFoundException If the user is not found in the database (Handled in GlobalExceptionHandler)
+     */
+    public UserModel getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         // Check if the user is authenticated and is an OAuth2User
         if (!(auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof OAuth2User oauth)) {
-            return Optional.empty();
+            throw new UserNotAuthenticatedException("User not authenticated");
         }
 
         // Check by email
         String email = oauth.getAttribute("email");
         if (email != null) {
-            return userRepository.findByEmail(email);
+            Optional<UserModel> user = userRepository.findByEmail(email);
+            if (user.isPresent()) {
+                return user.get();
+            }
         }
 
         // Check by provider and provider ID
         String providerId = attr(oauth, "sub", "id");
         String provider = auth instanceof OAuth2AuthenticationToken t ? t.getAuthorizedClientRegistrationId() : null;
         if (provider != null && providerId != null) {
-            return userRepository.findByProviderAndProviderId(provider, providerId);
+            Optional<UserModel> user = userRepository.findByProviderAndProviderId(provider, providerId);
+            if (user.isPresent()) {
+                return user.get();
+            }
         }
-        return Optional.empty();
+
+        if (email != null) {
+            throw new UserNotFoundException("User not found with email: " + email + " or provider: " + provider);
+        } else {
+            throw new UserNotFoundException("User not found with provider: " + provider);
+        }
     }
 
-    // Helper method to get attribute with multiple possible keys
+
+    // Helpers //
+    /**
+     * Gets an attribute from the OAuth2User using multiple possible keys
+     * 
+     * @param oauth The OAuth2User object
+     * @param keys Possible keys to look for the attribute
+     * @return The attribute value as a String, or null if not found
+     */
     private String attr(OAuth2User oauth, String... keys) {
         for (String k : keys) {
             Object v = oauth.getAttribute(k);
