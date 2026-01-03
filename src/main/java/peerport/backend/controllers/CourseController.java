@@ -49,6 +49,7 @@ public class CourseController {
      * Get all courses.
      * 
      * @return List of CourseWithInstructorsDTO
+     * @throws UserNotAuthenticatedException If the user is not authenticated to perform this action
      */
     @GetMapping
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN)")
@@ -71,6 +72,8 @@ public class CourseController {
      * 
      * @param courseId - The ID of the course to get 
      * @return The CourseWithAllDetailsDTO of the course
+     * @throws CourseNotFoundException If the course with the given ID does not exist
+     * @throws UserNotAuthenticatedException If the user is not authenticated to perform this action
      */
     @GetMapping("/{courseId}")
     public ResponseEntity<CourseWithAllDetailsDTO> getCourseById(@PathVariable String courseId) {
@@ -86,6 +89,11 @@ public class CourseController {
      * @param image - The image file for the course
      * @return The created CourseDTO
      * @throws IOException If an error occurs while processing the image file
+     * @throws FailedToParseFormDataException If the JSON parsing fails
+     * @throws InvalidFileTypeException If the uploaded file type is invalid
+     * @throws FileSizeLimitExceededException If the uploaded file exceeds the size limit
+     * @throws UserNotAuthenticatedException If the user is not authenticated to perform this action
+     * @throws UserNotAuthorizedException If the user is not authorized to create a course
      */
     @PostMapping
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
@@ -120,6 +128,12 @@ public class CourseController {
      * @param image - The image file to update for the course
      * @return The updated CourseDTO
      * @throws IOException If an error occurs while processing the image file
+     * @throws FailedToParseFormDataException If the JSON parsing fails
+     * @throws InvalidFileTypeException If the uploaded file type is invalid    
+     * @throws CourseNotFoundException If the course with the given ID does not exist
+     * @throws FileSizeLimitExceededException If the uploaded file exceeds the size limit
+     * @throws UserNotAuthenticatedException If the user is not authenticated to perform this action
+     * @throws UserNotAuthorizedException If the user is not authorized to update this course
      */
     @PutMapping("/{courseId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
@@ -156,6 +170,12 @@ public class CourseController {
      * @param image - The image file to update for the course
      * @return The patched CourseDTO
      * @throws IOException If an error occurs while processing the image file
+     * @throws FailedToParseFormDataException If the JSON parsing fails
+     * @throws InvalidFileTypeException If the uploaded file type is invalid
+     * @throws CourseNotFoundException If the course with the given ID does not exist
+     * @throws FileSizeLimitExceededException If the uploaded file exceeds the size limit
+     * @throws UserNotAuthenticatedException If the user is not authenticated to perform this action
+     * @throws UserNotAuthorizedException If the user is not authorized to patch this course
      */
     @PatchMapping("/{courseId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
@@ -192,6 +212,8 @@ public class CourseController {
      * 
      * @param courseId - The ID of the course to delete 
      * @return A ResponseEntity with no content
+     * @throws UserNotAuthenticatedException If the user is not authenticated to perform this action
+     * @throws UserNotAuthorizedException If the user is not authorized to delete this course
      */
     @DeleteMapping("/{courseId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
