@@ -1,8 +1,8 @@
 package peerport.backend.controllers;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,19 +15,18 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.validation.groups.Default;
 import peerport.backend.dto.CourseDTO;
-import peerport.backend.dto.ErrorDTO;
+import peerport.backend.exceptions.FailedToParseFormDataException;
 import peerport.backend.dto.CourseWithAllDetailsDTO;
 import peerport.backend.dto.CourseWithInstructorsDTO;
 import peerport.backend.model.CourseModel;
-import peerport.backend.model.FileModel;
-import peerport.backend.model.UserModel;
 import peerport.backend.model.groups.OnCreate;
-import peerport.backend.service.AuthService;
 import peerport.backend.service.CourseService;
-import peerport.backend.service.FileService;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
+/**
+ * Controller for handling course-related endpoints
+ */
 @RestController
 @RequestMapping("/courses")
 public class CourseController {
@@ -35,12 +34,6 @@ public class CourseController {
     // Services
     @Autowired
     private CourseService courseService;
-
-    @Autowired
-    private FileService fileService;
-
-    @Autowired
-    private AuthService authService;
     
     // Helper
     @Autowired
@@ -52,197 +45,90 @@ public class CourseController {
     private long fileUploadSizeLimit;
 
 
-    // Get all courses
+    /**
+     * Get all courses.
+     * 
+     * @return List of CourseWithInstructorsDTO
+     */
     @GetMapping
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN)")
     public ResponseEntity<List<CourseWithInstructorsDTO>> getAllCourses() {
-        try {
-            // Get all courses
-            List<CourseWithInstructorsDTO> courses = courseService.getAllCourses();
+        // Get all courses
+        List<CourseModel> courses = courseService.getAllCourses();
 
-            // Convert courses to DTOs
-            return ResponseEntity.ok(courses);
-
-        // Catch illegal argument exception
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        // Convert to DTOs
+        List<CourseWithInstructorsDTO> courseDTOs = new ArrayList<>();
+        for (CourseModel course : courses) {
+            courseDTOs.add(course.toCourseWithInstructorsDTO());
         }
+
+        // Return the DTOs
+        return ResponseEntity.ok(courseDTOs);
     }
 
-    // Get course by ID
-    @GetMapping("/{uuid}")
-    public ResponseEntity<CourseWithAllDetailsDTO> getCourseById(@PathVariable String uuid) {
-        // Get the course by ID and convert to DTO
-        return courseService.getCourseById(uuid)
-                .map(course -> ResponseEntity.ok(course.toCourseWithAllDetailsDTO()))
-                .orElse(ResponseEntity.notFound().build());
+    /**
+     * Get a course by its ID.
+     * 
+     * @param courseId - The ID of the course to get 
+     * @return The CourseWithAllDetailsDTO of the course
+     */
+    @GetMapping("/{courseId}")
+    public ResponseEntity<CourseWithAllDetailsDTO> getCourseById(@PathVariable String courseId) {
+        // Get and return the course
+        return ResponseEntity.ok(courseService.getCourseById(courseId).toCourseWithAllDetailsDTO());
     }
 
-    // Create new course - Only takes formData add JSON option later
+    /**
+     * Create a new course.
+     * Only users with ADMIN or INSTRUCTOR roles can create courses.
+     * 
+     * @param courseJsonFromForm - The JSON string representing the course to create
+     * @param image - The image file for the course
+     * @return The created CourseDTO
+     * @throws IOException If an error occurs while processing the image file
+     */
     @PostMapping
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
-    public ResponseEntity<?> createCourse(
-        // Form data
+    public ResponseEntity<CourseDTO> createCourse(
         @Validated({OnCreate.class, Default.class}) @RequestPart(value="course", required=false)  String courseJsonFromForm,
         @RequestPart(value="image", required=true) MultipartFile image
-    ) {
-        // Get the course from either FormData or JSON body
-        CourseModel course;
+    ) throws IOException {
+        // Convert json to CourseModel object
+        CourseModel courseFromForm;
 
-        // Try to parse the course JSON from form data
         try {
-            // Convert json to CourseModel object
-            CourseModel courseFromForm = courseJsonFromForm != null ?
-                    objectMapper.readValue(courseJsonFromForm, CourseModel.class) : null;
-
-            if (courseFromForm != null) {
-                course = courseFromForm;
-            } else {
-                course = null;
-            }
-
+            courseFromForm = objectMapper.readValue(courseJsonFromForm, CourseModel.class);
+        
         // Catch JSON parsing exceptions
         } catch (JacksonException e) {
-            ErrorDTO error = new ErrorDTO(
-                HttpStatus.BAD_REQUEST.value(), 
-                "Invalid JSON format for course data",
-                "POST /courses");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-        }
-        
-        // Validate that course data was provided
-        if (course == null) {
-            ErrorDTO error = new ErrorDTO(
-                HttpStatus.BAD_REQUEST.value(), 
-                "Course data is required given: ",
-                "POST /courses");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+            throw new FailedToParseFormDataException("Invalid JSON format for course data: " + courseJsonFromForm);
         }
 
-        // Get the current user
-        Optional<UserModel> currentUser = authService.getCurrentUser();
-
-        // Check if the user is present
-        if (!currentUser.isPresent()) {
-            ErrorDTO error = new ErrorDTO(
-                HttpStatus.UNAUTHORIZED.value(), 
-                "Unauthorized: User not found",
-                "POST /courses");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
-        }
-
-        // Validate the image
-        if (image != null && image.getSize() > fileUploadSizeLimit) { // 5MB limit
-            ErrorDTO error = new ErrorDTO(
-                HttpStatus.BAD_REQUEST.value(), 
-                "Image file size exceeds the limit of " + fileUploadSizeLimit + " bytes",
-                "POST /courses");
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-        }
-
-        // Add the user as an instructor before saving
-        course.addInstructor(currentUser.get());
-        
-        // Create the course once
-        CourseModel savedCourse = courseService.createCourse(course);
-    
-        // Save the image if needed
-        if (image != null) {
-            try {
-                FileModel savedCourseImage = fileService.saveCourseImage(image, savedCourse.getCourseId());
-                savedCourse.setImage(savedCourseImage);
-
-                // Update course with image reference
-                savedCourse = courseService.updateCourse(savedCourse.getCourseId(), savedCourse);
-            } catch (IOException e) {
-                // If image save fails, delete the created course to avoid orphans
-                courseService.deleteCourse(savedCourse.getCourseId());
-
-                // Make an error response
-                ErrorDTO error = new ErrorDTO(
-                    HttpStatus.INTERNAL_SERVER_ERROR.value(), 
-                    "Failed to save course image: " + e.getMessage(),
-                    "POST /courses");
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
-            } catch (IllegalArgumentException e) {
-                // If image save fails, delete the created course to avoid orphans
-                courseService.deleteCourse(savedCourse.getCourseId());
-
-                // Make an error response
-                ErrorDTO error = new ErrorDTO(
-                    HttpStatus.BAD_REQUEST.value(), 
-                    "Invalid image file: " + e.getMessage(),
-                    "POST /courses");
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
-            }
-        }
+        // Create the course
+        CourseModel savedCourse = courseService.createCourse(courseFromForm, image);
 
         // Return the created course
         return ResponseEntity.status(HttpStatus.CREATED).body(savedCourse.toDTO());
     }
 
-    // Update course - Only takes formData add JSON option later
-    @PutMapping("/{uuid}")
+    /**
+     * Update a course with the given fields.
+     * Only users with ADMIN or INSTRUCTOR roles can update courses.
+     * 
+     * @param courseId - The ID of the course to update
+     * @param courseJsonFromForm - The JSON string representing the course fields to update
+     * @param image - The image file to update for the course
+     * @return The updated CourseDTO
+     * @throws IOException If an error occurs while processing the image file
+     */
+    @PutMapping("/{courseId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<CourseDTO> updateCourse(
-        @PathVariable String uuid,
+        @PathVariable String courseId,
 
-        // Form data
-        @RequestPart(value="course", required=false) CourseModel courseFromForm,
-        @RequestPart(value="image", required=false) MultipartFile image
-    ) {
-        // Get the course from either FormData or JSON body
-        CourseModel course = courseFromForm;
-        
-        // Validate that course data was provided
-        if (course == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
-        }
-
-        // Validate the image
-        if (image != null && image.getSize() > fileUploadSizeLimit) { // 5MB limit
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
-        }
-
-        try {
-            // Try to update the course
-            CourseModel updatedCourse = courseService.updateCourse(uuid, course);
-
-            // Save the image if needed
-            if (image != null) {
-                FileModel savedCourseImage = fileService.saveCourseImage(image, updatedCourse.getCourseId());
-                // Delete old image to prevent orphans
-                FileModel oldImage = updatedCourse.getImage();
-                if (oldImage != null) {
-                    fileService.deleteFile(oldImage);
-                }
-                updatedCourse.setImage(savedCourseImage);
-                updatedCourse = courseService.updateCourse(uuid, updatedCourse);
-            }
-
-            // Return the updated course
-            return ResponseEntity.ok(updatedCourse.toDTO());
-
-        // Catch illegal argument exception and return 404 Not Found
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-
-        // Catch IO exceptions
-        } catch (IOException e) {
-            return ResponseEntity.internalServerError().build();
-        }
-    }
-
-    // Partially update course - Only takes formData add JSON option later
-    @PatchMapping("/{uuid}")
-    @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
-    public ResponseEntity<CourseDTO> patchCourse(
-        @PathVariable String uuid,
-
-        // Form data
         @RequestPart(value="course", required=false) String courseJsonFromForm,
         @RequestPart(value="image", required=false) MultipartFile image
-    ) {
+    ) throws IOException {
         // Set default for courseFromForm
         CourseModel courseFromForm = null;
 
@@ -254,69 +140,63 @@ public class CourseController {
 
         // Catch JSON parsing exceptions
         } catch (JacksonException e) {
-            return ResponseEntity.badRequest().build();
+            throw new FailedToParseFormDataException("Invalid JSON format for course data: " + courseJsonFromForm);
         }
 
-        try {
-            // Get the course from the request or database
-            CourseModel course;
-            CourseModel updatedCourse;
-
-            // The request contained course data
-            if (courseFromForm != null) {
-                course = courseFromForm;
-
-                // Try to update the course
-                updatedCourse = courseService.patchCourse(uuid, course);
-
-            // The request did not contain course data
-            } else {
-                // Get existing course from database
-                Optional<CourseModel> existingCourseOpt = courseService.getCourseById(uuid);
-                if (existingCourseOpt.isEmpty()) {
-                    return ResponseEntity.notFound().build();
-                }
-                updatedCourse = existingCourseOpt.get();
-            }
-
-            // Validate the image
-            if (image != null && image.getSize() > fileUploadSizeLimit) { // 5MB limit
-                return ResponseEntity.badRequest().build();
-            }
-
-            // Save the image if needed
-            if (image != null) {
-                FileModel savedCourseImage = fileService.saveCourseImage(image, updatedCourse.getCourseId());
-                FileModel oldImage = updatedCourse.getImage();
-                if (oldImage != null) {
-                    fileService.deleteFile(oldImage);
-                }
-                updatedCourse.setImage(savedCourseImage);
-                updatedCourse = courseService.patchCourse(uuid, updatedCourse);
-            }
-
-            // Return the updated course
-            return ResponseEntity.ok(updatedCourse.toDTO());
-
-        // Catch illegal argument exception and return 404 Not Found
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-
-        // Catch IO exceptions
-        } catch (IOException e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-        }
+        CourseModel updatedCourse = courseService.updateCourse(courseId, courseFromForm, image);
+        return ResponseEntity.ok(updatedCourse.toDTO());
     }
 
-    // Delete course
-    @DeleteMapping("/{uuid}")
+    /**
+     * Patch a course with the given fields.
+     * Only users with ADMIN or INSTRUCTOR roles can patch courses.
+     * 
+     * @param courseId - The ID of the course to patch
+     * @param courseJsonFromForm - The JSON string representing the course fields to patch
+     * @param image - The image file to update for the course
+     * @return The patched CourseDTO
+     * @throws IOException If an error occurs while processing the image file
+     */
+    @PatchMapping("/{courseId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
-    public ResponseEntity<Void> deleteCourse(@PathVariable String uuid) {
-        boolean deleted = courseService.deleteCourse(uuid);
-        if (deleted) {
-            return ResponseEntity.noContent().build();
+    public ResponseEntity<CourseDTO> patchCourse(
+        @PathVariable String courseId,
+
+        @RequestPart(value="course", required=false) String courseJsonFromForm,
+        @RequestPart(value="image", required=false) MultipartFile image
+    ) throws IOException {
+        // Set default for courseFromForm
+        CourseModel courseFromForm = null;
+
+        // Try to parse the course JSON from form data
+        try {
+            // Convert json to CourseModel object
+            courseFromForm = courseJsonFromForm != null ?
+                    objectMapper.readValue(courseJsonFromForm, CourseModel.class) : null;
+
+        // Catch JSON parsing exceptions
+        } catch (JacksonException e) {
+            throw new FailedToParseFormDataException("Invalid JSON format for course data: " + courseJsonFromForm);
         }
-        return ResponseEntity.notFound().build();
+
+        // Patch the course
+        CourseModel updatedCourse = courseService.patchCourse(courseId, courseFromForm, image);
+
+        // Return the updated course
+        return ResponseEntity.ok(updatedCourse.toDTO());
+    }
+
+    /**
+     * Deletes a course by its ID.
+     * Only users with ADMIN or INSTRUCTOR roles can delete courses.
+     * 
+     * @param courseId - The ID of the course to delete 
+     * @return A ResponseEntity with no content
+     */
+    @DeleteMapping("/{courseId}")
+    @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
+    public ResponseEntity<Void> deleteCourse(@PathVariable String courseId) {
+        courseService.deleteCourse(courseId);
+        return ResponseEntity.noContent().build();
     }
 }
