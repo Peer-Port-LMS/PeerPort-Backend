@@ -26,10 +26,9 @@ public class AssignmentService {
     private CourseService courseService;
 
     // Create Assignment
-    public AssignmentModel createAssignment(AssignmentModel assignment, String courseId) throws IllegalArgumentException {
+    public AssignmentModel createAssignment(AssignmentModel assignment, String courseId) {
         // Get the course by ID
-        CourseModel course = courseService.getCourseById(courseId)
-                .orElseThrow(() -> new IllegalArgumentException("Course with ID " + courseId + " not found"));
+        CourseModel course = courseService.getCourseById(courseId);
         
         // Set the course to the assignment
         assignment.setCourse(course);
@@ -41,13 +40,7 @@ public class AssignmentService {
     // Get all assignments
     public List<AssignmentModel> getAllAssignments() throws IllegalArgumentException {
         // Get the users role
-        Optional<UserModel> userOpt = authService.getCurrentUser();
-
-        // Check if the user is authenticated
-        if (userOpt.isEmpty()) {
-            throw new IllegalArgumentException("User not authenticated");
-        }
-        UserModel user = userOpt.get();
+        UserModel user = authService.getCurrentUser();
 
         // Check user role
         if (user.getRole() == Role.ADMIN) {
@@ -88,10 +81,10 @@ public class AssignmentService {
 
     // Patch / partially update assignment
     public AssignmentModel patchAssignment(String assignmentId, AssignmentModel updatedFields) throws IllegalArgumentException {
-        // Get the exsting assignment
+        // Get the existing assignment
         Optional<AssignmentModel> assignment = assignmentRepository.findById(assignmentId);
 
-        // If assignment doesnt exsit return empty
+        // If assignment doesn't exist return empty
         if (assignment.isEmpty()) {
             throw new IllegalArgumentException("Assignment with ID " + assignmentId + " not found");
         }
