@@ -1,0 +1,17 @@
+{"properties": [
+  {
+    "name": "server.hosting-url",
+    "type": "java.lang.String",
+    "description": "The URL where the server is hosted"
+  },
+  {
+    "name": "file.upload-size-limit",
+    "type": "java.lang.String",
+    "description": "The maximum allowed size for file uploads"
+  },
+  {
+    "name": "file.upload-dir",
+    "type": "java.lang.String",
+    "description": "The directory where uploaded files are stored"
+  }
+]}
