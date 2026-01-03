@@ -1,10 +1,12 @@
 package peerport.backend.controllers;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -34,88 +36,94 @@ public class AnnouncementController {
         List<AnnouncementModel> announcements = announcementService.getAllAnnouncements();
 
         // Convert to DTOs
-        List<AnnouncementDTO> announcementDTOs = announcements.stream().map(AnnouncementModel::toDTO).toList();
+        List<AnnouncementDTO> announcementDTOs = new ArrayList<>();
+        for (AnnouncementModel announcement : announcements) {
+            announcementDTOs.add(announcement.toDTO());
+        }
+
+        // Return the DTOs
         return ResponseEntity.ok(announcementDTOs);
     }
 
-    // Get announcement by ID
+    /**
+     * Get announcement by ID
+     * 
+     * @param announcementId - ID of the announcement to get
+     * @return The AnnouncementModel
+     */
     @GetMapping("/{announcementId}")
     public ResponseEntity<AnnouncementDTO> getAnnouncementById(@PathVariable String announcementId) {
         // Get the announcement by ID
-        Optional<AnnouncementModel> announcement = announcementService.getAnnouncementById(announcementId);
+        AnnouncementModel announcement = announcementService.getAnnouncementById(announcementId);
 
-        // Check if announcement is empty and return 404 if so
-        if (announcement.isEmpty()) {
-            return ResponseEntity.notFound().build();
-        
-        // Otherwise, return the announcement with 200 OK
-        } else {
-            AnnouncementDTO ann = announcement.get().toDTO();
-            return ResponseEntity.ok(ann);
-        }
+        // Return the announcement as DTO
+        return ResponseEntity.ok(announcement.toDTO());
     }
 
-    // Create announcement
+    /**
+     * Create announcement
+     * 
+     * @param courseId - ID of the course to create the announcement for
+     * @param announcementModel - AnnouncementModel to create
+     * @return The created AnnouncementModel
+     */
     @PostMapping("/{courseId}")
+    @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<AnnouncementDTO> createAnnouncement(@PathVariable String courseId, @Valid @RequestBody AnnouncementModel announcementModel) {
-        AnnouncementModel createdAnnouncement;
+        // Create announcement
+        AnnouncementModel createdAnnouncement = announcementService.createAnnouncement(courseId, announcementModel);
 
-        // Try to create announcement and catch illegal argument exception
-        try {
-            createdAnnouncement = announcementService.createAnnouncement(courseId, announcementModel);
-        
-        // Catch illegal argument exception and return 404 Not Found
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        }
-
-        // Return the created announcement with 201 Created
-        return ResponseEntity.status(201).body(createdAnnouncement.toDTO());
+        // Return the created announcement
+        return ResponseEntity.status(HttpStatus.CREATED).body(createdAnnouncement.toDTO());
     }
 
-    // Update announcement
+    /**
+     * Update announcement
+     * 
+     * @param announcementId - ID of the announcement to update
+     * @param updatedAnnouncement - AnnouncementModel with updated fields
+     * @return The updated AnnouncementModel
+     */
     @PutMapping("/{announcementId}")
+    @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<AnnouncementDTO> updateAnnouncement(@PathVariable String announcementId, @Valid @RequestBody AnnouncementModel updatedAnnouncement) {
-        try {
-            // Try to update announcement
-            AnnouncementModel updated = announcementService.updateAnnouncement(announcementId, updatedAnnouncement);
-            
-            // Return the updated announcement with 200 OK
-            return ResponseEntity.ok(updated.toDTO());
-
-        // Catch illegal argument exception and return 404 Not Found
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        }
+        // Try to update announcement
+        AnnouncementModel updated = announcementService.updateAnnouncement(announcementId, updatedAnnouncement);
+        
+        // Return the updated announcement with 200 OK
+        return ResponseEntity.ok(updated.toDTO());
     }
 
-    // Patch announcement
+    /**
+     * Patch announcement
+     * 
+     * @param announcementId - ID of the announcement to patch
+     * @param patchedAnnouncement - AnnouncementModel with fields to patch
+     * @return The patched AnnouncementModel
+     */
     @PatchMapping("/patch/{announcementId}")
+    @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<AnnouncementDTO> patchAnnouncement(@PathVariable String announcementId, @RequestBody AnnouncementModel patchedAnnouncement) {
-        try {
-            // Try to patch announcement
-            AnnouncementModel patched = announcementService.patchAnnouncement(announcementId, patchedAnnouncement);
-            
-            // Return the patched announcement with 200 OK
-            return ResponseEntity.ok(patched.toDTO());
-
-        // Catch illegal argument exception and return 404 Not Found
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        }
+        // Try to patch announcement
+        AnnouncementModel patched = announcementService.patchAnnouncement(announcementId, patchedAnnouncement);
+        
+        // Return the patched announcement with 200 OK
+        return ResponseEntity.ok(patched.toDTO());
     }
 
-    // Delete announcement
+    /**
+     * Delete announcement
+     * 
+     * @param announcementId - ID of the announcement to delete
+     * @return ResponseEntity with no content
+     */
     @DeleteMapping("/delete/{announcementId}")
+    @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<Void> deleteAnnouncement(@PathVariable String announcementId) {
         // Delete the announcement
-        boolean deleted = announcementService.deleteAnnouncement(announcementId);
-        
-        // Return appropriate response based on deletion result
-        if (deleted) {
-            return ResponseEntity.noContent().build();
-        } else {
-            return ResponseEntity.notFound().build();
-        }
+        announcementService.deleteAnnouncement(announcementId);
+
+        // Return no content status
+        return ResponseEntity.noContent().build();
     }
 }
