@@ -1,5 +1,6 @@
 package peerport.backend.service;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -12,8 +13,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import peerport.backend.database.FilesRepository;
+import peerport.backend.exceptions.files.InvalidFileTypeException;
 import peerport.backend.model.FileModel;
 
+/**
+ * Service for handling file and FileModel operations
+ */
 @Service
 public class FileService {
 
@@ -24,10 +29,6 @@ public class FileService {
     private String uploadDir;
     private String coursesDir = "courses";
 
-    @Value("${server.hosting-url}")
-    private String serverUrl;
-    private static String filesEndpoint = "files";
-
     // Regular functions
     public Optional<FileModel> getFileById(String fileId) {
         return filesRepository.findById(fileId);
@@ -35,16 +36,15 @@ public class FileService {
 
 
     // Specific functions
-    public String getFileUrl(String fileId) {
-        if (serverUrl == null || serverUrl.isEmpty()) {
-            System.err.println("Warning: serverUrl is not set properly. Default to localhost");
-            return "http://localhost:8080/" + filesEndpoint + "/" + fileId;
-        }
-        return serverUrl + "/" + filesEndpoint + "/" + fileId;
-    }
-
-    // Save a course image
-    public FileModel saveCourseImage(MultipartFile file, String courseId) throws IOException, IllegalArgumentException {
+    /**
+     * Saves a course image
+     * @param file - The image file to save
+     * @param courseId - The ID of the course
+     * @return The new file model
+     * @throws IOException If there was an error saving the file
+     * @throws InvalidFileTypeException If the file type is invalid (Gets handled in GlobalExceptionHandler)
+     */
+    public FileModel saveCourseImage(MultipartFile file, String courseId) throws IOException {
         // Get the file extension
         String fileExtension = getFileExtension(file.getOriginalFilename());
 
@@ -54,35 +54,42 @@ public class FileService {
         // Get the content type
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
-            throw new IllegalArgumentException("File must be an image. Received: " + contentType);
+            throw new InvalidFileTypeException("File must be an image. Received: " + contentType);
         }
 
         // Save the image
         String savedImagePath = saveFile(file, this.uploadDir + "/" + this.coursesDir + "/" + fileName);
 
-        // Save the FileModel - The fileID is not generated until saved
+        // Create the new FileModel
         FileModel newFile = new FileModel(fileName, savedImagePath, fileExtension, contentType);
-        filesRepository.save(newFile);
-
-        // Get the url
-        newFile.setUrl(getFileUrl(newFile.getFileId()));
 
         // Save the file model to the database
         return filesRepository.save(newFile);
     }
 
     // Delete a file
-    public void deleteFile(FileModel file) throws IOException, IllegalArgumentException {
+    /**
+     * Deletes a file
+     * @param file - The file model which links to a file to delete
+     * @throws IOException If there was an error deleting the file
+     * @throws FileNotFoundException If the file was not found on the filesystem
+     */
+    public void deleteFile(FileModel file) throws IOException, FileNotFoundException {
         // Delete the file from the filesystem
         if (!deleteFileHelper(file.getFilePath())) {
-            throw new IllegalArgumentException("File not found on the filesystem: " + file.getFilePath());
+            throw new FileNotFoundException("File not found on the filesystem: " + file.getFilePath());
         }
 
         // Delete the file from the repo first
         filesRepository.delete(file);
     }
 
-    // Get file extension
+
+    /**
+     * Gets the file extension from a file name
+     * @param fileName - The file name
+     * @return The file extension
+     */
     private String getFileExtension(String fileName) {
         if (fileName == null || !fileName.contains(".")) {
             return "";
@@ -90,7 +97,13 @@ public class FileService {
         return fileName.substring(fileName.lastIndexOf('.') + 1);
     }
 
-    // Saves a file
+    /**
+     * Saves a file to the specified path
+     * @param file - The file to save
+     * @param path - The path to save the file to
+     * @return The path where the file was saved
+     * @throws IOException If there was an error saving the file
+     */
     private String saveFile(MultipartFile file, String path) throws IOException {
         // Create directory if it doesn't exist
         Path uploadPath = Paths.get(path).getParent();
@@ -105,7 +118,13 @@ public class FileService {
         return filePath.toString();
     }
 
-    // Delete a file
+
+    /**
+     * Deletes a file at the specified path
+     * @param path - The path of the file to delete
+     * @return True if the file was deleted, false if it did not exist
+     * @throws IOException If there was an error deleting the file
+     */
     private boolean deleteFileHelper(String path) throws IOException{
         Path filePath = Paths.get(path);
         return Files.deleteIfExists(filePath);
