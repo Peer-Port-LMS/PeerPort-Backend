@@ -15,6 +15,7 @@ import jakarta.persistence.Table;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
 import peerport.backend.dto.UserDTO;
+import peerport.backend.model.RoleModel.Role;
 
 @Entity
 @Table(name="\"Users\"")
@@ -37,8 +38,8 @@ public class UserModel {
     @Column(name="\"idNumber\"")
     private String idNumber;
 
-    // Incase the role isn't set, default to STUDENT
-    private Enum<RoleModel.Role> role = RoleModel.Role.STUDENT;
+    // In case the role isn't set, default to STUDENT
+    private Role role = Role.STUDENT;
 
     // Oauth2 fields
     private String provider;
@@ -65,7 +66,7 @@ public class UserModel {
         String email,
         String profilePictureUrl,
         String idNumber,
-        Enum<RoleModel.Role> role
+        Role role
     ) {
         this.userId = userId;
         this.name = name;
@@ -116,11 +117,11 @@ public class UserModel {
         this.idNumber = idNumber;
     }
 
-    public Enum<RoleModel.Role> getRole() {
+    public RoleModel.Role getRole() {
         return role;
     }
 
-    public void setRole(Enum<RoleModel.Role> role) {
+    public void setRole(RoleModel.Role role) {
         this.role = role;
     }
 
