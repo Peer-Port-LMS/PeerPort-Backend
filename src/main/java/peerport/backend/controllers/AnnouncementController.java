@@ -25,7 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Valid;
 import jakarta.validation.Validator;
-import peerport.backend.dto.AnnouncementDTO;
+import peerport.backend.dto.announcements.AnnouncementDTO;
 import peerport.backend.exceptions.FailedToParseFormDataException;
 import peerport.backend.exceptions.announcements.AnnouncementNotFoundException;
 import peerport.backend.exceptions.courses.CourseNotFoundException;
