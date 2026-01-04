@@ -67,6 +67,10 @@ public class FileModel {
     @JoinColumn(name="\"assignmentId\"")
     private AssignmentModel assignment;
 
+    @ManyToOne
+    @JoinColumn(name="\"assignmentSubmissionId\"")
+    private AssignmentSubmissionModel assignmentSubmission;
+
 
     // Environment variables (ignored by JPA)
     @Transient
@@ -156,6 +160,14 @@ public class FileModel {
 
     public void setAssignment(AssignmentModel assignment) {
         this.assignment = assignment;
+    }
+
+    public AssignmentSubmissionModel getAssignmentSubmission() {
+        return assignmentSubmission;
+    }
+
+    public void setAssignmentSubmission(AssignmentSubmissionModel assignmentSubmission) {
+        this.assignmentSubmission = assignmentSubmission;
     }
 
     public Date getDateCreated() {
