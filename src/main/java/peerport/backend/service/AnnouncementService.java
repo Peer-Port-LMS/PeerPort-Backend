@@ -90,10 +90,12 @@ public class AnnouncementService {
     @Transactional
     public AnnouncementModel createAnnouncement(String courseId, AnnouncementModel announcement, List<MultipartFile> files) throws IOException {
         // Check files
-        for (MultipartFile file : files) {
-            if (file != null && file.getSize() > fileUploadSizeLimit) { // 5MB limit
-                throw new FileSizeLimitExceededException("File size exceeds limit of " + fileUploadSizeLimit + " bytes.");
-            } 
+        if (files != null) {
+            for (MultipartFile file : files) {
+                if (file != null && file.getSize() > fileUploadSizeLimit) { // 5MB limit
+                    throw new FileSizeLimitExceededException("File size exceeds limit of " + fileUploadSizeLimit + " bytes.");
+                }
+            }
         }
         
         // Get the course
@@ -105,13 +107,18 @@ public class AnnouncementService {
         // Set the course to the announcement
         announcement.setCourse(course);
 
+        // Save the announcement first to ensure ID is available for file naming
+        AnnouncementModel savedAnnouncement = announcementsRepository.save(announcement);
+
         // Save the files to the announcement
         if (files != null) {
-            fileService.saveAnnouncementFiles(files, announcement.getAnnouncementId(), courseId);
+            List<FileModel> savedFiles = fileService.saveAnnouncementFiles(files, savedAnnouncement, courseId);
+            savedAnnouncement.getFiles().addAll(savedFiles);
+            announcementsRepository.save(savedAnnouncement);
         }
 
-        // Save the announcement
-        return announcementsRepository.save(announcement);
+        // Return the announcement with any attached files
+        return savedAnnouncement;
     }
 
     /**
@@ -208,10 +215,12 @@ public class AnnouncementService {
     @Transactional
     public AnnouncementModel updateAnnouncement(String announcementId, AnnouncementModel updatedAnnouncement, List<MultipartFile> files) throws IOException {
         // Check files
-        for (MultipartFile file : files) {
-            if (file != null && file.getSize() > fileUploadSizeLimit) { // 5MB limit
-                throw new FileSizeLimitExceededException("File size exceeds limit of " + fileUploadSizeLimit + " bytes.");
-            } 
+        if (files != null) {
+            for (MultipartFile file : files) {
+                if (file != null && file.getSize() > fileUploadSizeLimit) { // 5MB limit
+                    throw new FileSizeLimitExceededException("File size exceeds limit of " + fileUploadSizeLimit + " bytes.");
+                }
+            }
         }
         
         // Get the announcement by ID
@@ -226,7 +235,8 @@ public class AnnouncementService {
 
         if (files != null) {
             // Save the files to the announcement
-            fileService.saveAnnouncementFiles(files, announcement.getAnnouncementId(), announcement.getCourse().getCourseId());
+            List<FileModel> savedFiles = fileService.saveAnnouncementFiles(files, announcement, announcement.getCourse().getCourseId());
+            announcement.getFiles().addAll(savedFiles);
         }
 
         // Update the announcement in the database
@@ -307,10 +317,12 @@ public class AnnouncementService {
     @Transactional
     public AnnouncementModel patchAnnouncement(String announcementId, AnnouncementModel patchedAnnouncement, List<MultipartFile> files) throws IOException {
         // Check files
-        for (MultipartFile file : files) {
-            if (file != null && file.getSize() > fileUploadSizeLimit) { // 5MB limit
-                throw new FileSizeLimitExceededException("File size exceeds limit of " + fileUploadSizeLimit + " bytes.");
-            } 
+        if (files != null) {
+            for (MultipartFile file : files) {
+                if (file != null && file.getSize() > fileUploadSizeLimit) { // 5MB limit
+                    throw new FileSizeLimitExceededException("File size exceeds limit of " + fileUploadSizeLimit + " bytes.");
+                }
+            }
         }
         
         // Get the announcement by ID
@@ -318,8 +330,8 @@ public class AnnouncementService {
 
         if (files != null) {
             // Save the files to the announcement
-            List<FileModel> savedFiles = fileService.saveAnnouncementFiles(files, announcement.getAnnouncementId(), announcement.getCourse().getCourseId());
-            announcement.setFiles(savedFiles);
+            List<FileModel> savedFiles = fileService.saveAnnouncementFiles(files, announcement, announcement.getCourse().getCourseId());
+            announcement.getFiles().addAll(savedFiles);
 
             // Update the announcement in the database
             announcementsRepository.save(announcement);
