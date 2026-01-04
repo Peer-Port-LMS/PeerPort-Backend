@@ -1,9 +1,11 @@
 package peerport.backend.controllers;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -15,12 +17,17 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import peerport.backend.dto.AssignmentDTO;
 import peerport.backend.dto.AssignmentWithCourseDTO;
+import peerport.backend.exceptions.FailedToParseFormDataException;
 import peerport.backend.model.AssignmentModel;
 import peerport.backend.service.AssignmentService;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Controller for handling assignment-related endpoints
@@ -31,6 +38,9 @@ public class AssignmentController {
     
 	@Autowired
 	private AssignmentService assignmentService;
+
+	@Autowired
+	private ObjectMapper objectMapper;
 
 	/**
 	 * Get all assignments.
@@ -91,6 +101,44 @@ public class AssignmentController {
 	}
 
 	/**
+	 * Create a new assignment for a course with file attachments.
+	 * 
+	 * @param courseId The ID of the course to which the assignment belongs.
+	 * @param assignmentJson JSON string of assignment data.
+	 * @param files List of files to attach to the assignment.
+	 * @return The created assignment.
+	 * @throws IOException If there was an error processing files.
+	 * @throws FileSizeLimitExceededException if any file exceeds size limit.
+	 * @throws CourseNotFoundException if the course with the given ID does not exist.
+	 * @throws UserNotAuthenticatedException if the user is not authenticated to perform this action.
+	 * @throws UserNotAuthorizedException if the user is not authorized to create an assignment for this course.
+	 */
+	@PostMapping(value = "/{courseId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@PreAuthorize("@authservice.hasAnyRole(@authservice.ADMIN, @authservice.INSTRUCTOR)")
+	public ResponseEntity<AssignmentDTO> createAssignmentWithFiles(
+			@PathVariable String courseId,
+			@RequestPart("assignment") String assignmentJson,
+			@RequestPart(value = "files", required = false) List<MultipartFile> files
+	) throws IOException {
+		// Parse JSON to AssignmentModel
+		AssignmentModel assignment;
+		try {
+			assignment = objectMapper.readValue(assignmentJson, AssignmentModel.class);
+		} catch (Exception e) {
+			throw new FailedToParseFormDataException("Failed to parse assignment JSON: " + e.getMessage());
+		}
+		
+		// Validate assignment
+		assignmentService.validateAssignment(assignment);
+		
+		// Create the assignment with files
+		AssignmentModel savedAssignment = assignmentService.createAssignment(assignment, courseId, files);
+		
+		// Return the created assignment with 201 status
+		return ResponseEntity.status(HttpStatus.CREATED).body(savedAssignment.toDTO());
+	}
+
+	/**
 	 * Update an assignment by its ID.
 	 * 
 	 * @param assignmentId The ID of the assignment to update.
@@ -111,6 +159,48 @@ public class AssignmentController {
 	}
 
 	/**
+	 * Update an assignment by its ID with file changes.
+	 * 
+	 * @param assignmentId The ID of the assignment to update.
+	 * @param assignmentJson JSON string of assignment data.
+	 * @param files List of files to attach to the assignment.
+	 * @param removeFileIds List of file IDs to remove.
+	 * @param replaceAll Whether to replace all existing files.
+	 * @return The updated assignment.
+	 * @throws IOException If there was an error processing files.
+	 * @throws FileSizeLimitExceededException if any file exceeds size limit.
+	 * @throws AssignmentNotFoundException if the assignment with the given ID does not exist.
+	 * @throws UserNotAuthenticatedException if the user is not authenticated to perform this action.
+	 * @throws UserNotAuthorizedException if the user is not authorized to update this assignment.
+	 */
+	@PutMapping(value = "/{assignmentId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@PreAuthorize("@authservice.hasAnyRole(@authservice.ADMIN, @authservice.INSTRUCTOR)")
+	public ResponseEntity<AssignmentDTO> updateAssignmentWithFiles(
+			@PathVariable String assignmentId,
+			@RequestPart("assignment") String assignmentJson,
+			@RequestPart(value = "files", required = false) List<MultipartFile> files,
+			@RequestParam(value = "removeFileIds", required = false) List<String> removeFileIds,
+			@RequestParam(value = "replaceAll", required = false, defaultValue = "false") Boolean replaceAll
+	) throws IOException {
+		// Parse JSON to AssignmentModel
+		AssignmentModel assignment;
+		try {
+			assignment = objectMapper.readValue(assignmentJson, AssignmentModel.class);
+		} catch (Exception e) {
+			throw new FailedToParseFormDataException("Failed to parse assignment JSON: " + e.getMessage());
+		}
+		
+		// Validate assignment
+		assignmentService.validateAssignment(assignment);
+		
+		// Update the assignment with file changes
+		AssignmentModel updatedAssignment = assignmentService.updateAssignment(assignmentId, assignment, files, removeFileIds, replaceAll);
+		
+		// Return the updated assignment as DTO
+		return ResponseEntity.ok(updatedAssignment.toDTO());
+	}
+
+	/**
 	 * Patch an assignment by its ID.
 	 * 
 	 * @param assignmentId The ID of the assignment to patch.
@@ -126,6 +216,47 @@ public class AssignmentController {
 		// Patch the assignment
 		AssignmentModel patchedAssignment = assignmentService.patchAssignment(assignmentId, assignment);
 
+		// Return the patched assignment as DTO
+		return ResponseEntity.ok(patchedAssignment.toDTO());
+	}
+
+	/**
+	 * Patch an assignment by its ID with file changes.
+	 * 
+	 * @param assignmentId The ID of the assignment to patch.
+	 * @param assignmentJson JSON string of assignment fields to update.
+	 * @param files List of files to attach to the assignment.
+	 * @param removeFileIds List of file IDs to remove.
+	 * @param replaceAll Whether to replace all existing files.
+	 * @return The patched assignment.
+	 * @throws IOException If there was an error processing files.
+	 * @throws FileSizeLimitExceededException if any file exceeds size limit.
+	 * @throws AssignmentNotFoundException if the assignment with the given ID does not exist.
+	 * @throws UserNotAuthenticatedException if the user is not authenticated to perform this action.
+	 * @throws UserNotAuthorizedException if the user is not authorized to patch this assignment.
+	 */
+	@PatchMapping(value = "/{assignmentId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	@PreAuthorize("@authservice.hasAnyRole(@authservice.ADMIN, @authservice.INSTRUCTOR)")
+	public ResponseEntity<AssignmentDTO> patchAssignmentWithFiles(
+			@PathVariable String assignmentId,
+			@RequestPart("assignment") String assignmentJson,
+			@RequestPart(value = "files", required = false) List<MultipartFile> files,
+			@RequestParam(value = "removeFileIds", required = false) List<String> removeFileIds,
+			@RequestParam(value = "replaceAll", required = false, defaultValue = "false") Boolean replaceAll
+	) throws IOException {
+		// Parse JSON to AssignmentModel
+		AssignmentModel assignment;
+		try {
+			assignment = objectMapper.readValue(assignmentJson, AssignmentModel.class);
+		} catch (Exception e) {
+			throw new FailedToParseFormDataException("Failed to parse assignment JSON: " + e.getMessage());
+		}
+		
+		// Note: For PATCH, we don't validate since fields are optional
+		
+		// Patch the assignment with file changes
+		AssignmentModel patchedAssignment = assignmentService.patchAssignment(assignmentId, assignment, files, removeFileIds, replaceAll);
+		
 		// Return the patched assignment as DTO
 		return ResponseEntity.ok(patchedAssignment.toDTO());
 	}
