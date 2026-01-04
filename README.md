@@ -280,7 +280,7 @@ The MVP focuses on core LMS functionality: course management, basic content deli
 - [x] DTO implemented
 - [x] Service implemented
 - [x] Controller implemented
-- [ ] File attachment implemented
+- [x] File attachment implemented
 - [ ] Verify functionality
 - [x] Add error messages
 - [x] Add javaDoc comments
