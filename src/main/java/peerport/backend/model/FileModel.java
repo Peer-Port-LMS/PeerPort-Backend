@@ -122,6 +122,22 @@ public class FileModel {
         this.contentType = contentType;
     }
 
+    public ContentModel getContent() {
+        return content;
+    }
+
+    public void setContent(ContentModel content) {
+        this.content = content;
+    }
+
+    public AnnouncementModel getAnnouncement() {
+        return announcement;
+    }
+
+    public void setAnnouncement(AnnouncementModel announcement) {
+        this.announcement = announcement;
+    }
+
     public Date getDateCreated() {
         return dateCreated;
     }
