@@ -12,6 +12,7 @@ import org.springframework.web.context.request.WebRequest;
 
 import peerport.backend.dto.ErrorDTO;
 import peerport.backend.exceptions.assignments.AssignmentNotFoundException;
+import peerport.backend.exceptions.content.ContentNotFoundException;
 import peerport.backend.exceptions.announcements.AnnouncementNotFoundException;
 import peerport.backend.exceptions.courses.CourseNotFoundException;
 import peerport.backend.exceptions.files.FileSizeLimitExceededException;
@@ -83,6 +84,18 @@ public class GlobalExceptionHandler {
     // Course exceptions
     @ExceptionHandler(CourseNotFoundException.class)
     public ResponseEntity<ErrorDTO> handleCourseNotFoundException(CourseNotFoundException ex, WebRequest request) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.NOT_FOUND.value(),
+            ex.getMessage(),
+            request.getDescription(false).replace("uri=", "")
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorDTO);
+    }
+
+
+    // Content exceptions
+    @ExceptionHandler(ContentNotFoundException.class)
+    public ResponseEntity<ErrorDTO> handleContentNotFoundException(ContentNotFoundException ex, WebRequest request) {
         ErrorDTO errorDTO = new ErrorDTO(
             HttpStatus.NOT_FOUND.value(),
             ex.getMessage(),
