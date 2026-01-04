@@ -39,6 +39,7 @@ public class AssignmentService {
      * @throws UserNotAuthorizedException if user is not authorized to edit (Handled in GlobalExceptionHandler)
      * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
      */
+    @Transactional
     public AssignmentModel createAssignment(AssignmentModel assignment, String courseId) {
         // Get the course by ID
         CourseModel course = courseService.getCourseById(courseId);
