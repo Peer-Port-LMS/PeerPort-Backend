@@ -122,6 +122,14 @@ public class FileModel {
         this.contentType = contentType;
     }
 
+    public CourseModel getCourse() {
+        return course;
+    }
+
+    public void setCourse(CourseModel course) {
+        this.course = course;
+    }
+
     public ContentModel getContent() {
         return content;
     }
