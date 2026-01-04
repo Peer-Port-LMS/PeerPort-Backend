@@ -44,7 +44,7 @@ public class FileModel {
 
     @CreationTimestamp
     @Column(name="\"dateCreated\"")
-    private Date dateCreated = new Date();
+    private Date dateCreated;
 
     @UpdateTimestamp
     @Column(name="\"dateUpdated\"")
