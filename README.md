@@ -315,14 +315,14 @@ The MVP focuses on core LMS functionality: course management, basic content deli
 <details>
 <summary>Implement Assignment Submissions <img src="https://img.shields.io/badge/status-not%20started-red" alt="Not Started"></summary>
 
-- [ ] Model implemented
-- [ ] DTO implemented
-- [ ] Service implemented
-- [ ] Controller implemented
-- [ ] File attachment implemented
+- [x] Model implemented
+- [x] DTO implemented
+- [x] Service implemented
+- [x] Controller implemented
+- [x] File attachment implemented
 - [ ] Verify functionality
-- [ ] Add error messages
-- [ ] Add javaDoc comments
+- [x] Add error messages
+- [x] Add javaDoc comments
 </details>
 
 <details>
