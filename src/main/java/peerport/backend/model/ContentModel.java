@@ -13,10 +13,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import peerport.backend.dto.ContentDTO;
-import peerport.backend.dto.ContentWithAllDetailsDTO;
-import peerport.backend.dto.ContentWithChildrenDTO;
-import peerport.backend.dto.ContentWithCourseDTO;
+import peerport.backend.dto.content.ContentDTO;
+import peerport.backend.dto.content.ContentWithAllDetailsDTO;
+import peerport.backend.dto.content.ContentWithChildrenDTO;
+import peerport.backend.dto.content.ContentWithCourseDTO;
 
 @Entity
 @Table(name="\"Content\"")
