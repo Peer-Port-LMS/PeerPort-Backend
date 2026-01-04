@@ -209,9 +209,8 @@ public class AssignmentSubmissionService {
      */
     @Transactional
     public void deleteAssignmentSubmissionById(String assignmentSubmissionId) {
-        // Check if the user is allowed to delete the submission
-        // Also checks if the submission exists
-        userAllowedToModifySubmission(assignmentSubmissionId);
+        // Check if the submission exists and if the user is allowed to modify it
+        getSubmissionById(assignmentSubmissionId);
 
         // Delete the assignment submission
         assignmentSubmissionRepository.deleteById(assignmentSubmissionId);
@@ -227,7 +226,7 @@ public class AssignmentSubmissionService {
      * @throws UserNotAuthenticatedException If the user is not authenticated (Handled in GlobalExceptionHandler)
      * @throws UserNotAuthorizedException If the user is not authorized to modify the submission (Handled in GlobalExceptionHandler)
      */
-    public void userAllowedToModifySubmission(AssignmentSubmissionModel submission) {
+    private void userAllowedToModifySubmission(AssignmentSubmissionModel submission) {
         // Get the current users role
         UserModel currentUser = authService.getCurrentUser();
         Role role = currentUser.getRole();
@@ -248,23 +247,5 @@ public class AssignmentSubmissionService {
             throw new UserNotAuthorizedException("You are not authorized to modify this submission.");
         }
 
-        return;
-    }
-
-    /**
-     * Check if the current user is allowed to modify the submission with the given ID
-     * 
-     * @param assignmentSubmissionId The ID of the assignment submission to check
-     * @throws AssignmentSubmissionNotFoundException If the assignment submission is not found (Handled in GlobalExceptionHandler)
-     * @throws UserNotFoundException If the user is not found (Handled in GlobalExceptionHandler)
-     * @throws UserNotAuthenticatedException If the user is not authenticated (Handled in GlobalExceptionHandler)
-     * @throws UserNotAuthorizedException If the user is not authorized to modify the submission (Handled in GlobalExceptionHandler)
-     */
-    public void userAllowedToModifySubmission(String assignmentSubmissionId) {
-        // Get the assignment submission
-        AssignmentSubmissionModel submission = getSubmissionById(assignmentSubmissionId);
-
-        // Check if the user is allowed to modify the submission
-        userAllowedToModifySubmission(submission);
     }
 }
