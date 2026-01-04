@@ -22,8 +22,8 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import peerport.backend.dto.AssignmentDTO;
-import peerport.backend.dto.AssignmentWithCourseDTO;
+import peerport.backend.dto.assignments.AssignmentDTO;
+import peerport.backend.dto.assignments.AssignmentWithCourseDTO;
 import peerport.backend.exceptions.FailedToParseFormDataException;
 import peerport.backend.model.AssignmentModel;
 import peerport.backend.service.AssignmentService;
