@@ -199,6 +199,21 @@ public class CourseModel {
         this.image = image;
     }
 
+    public List<UserModel> getUsers() {
+        List<UserModel> users = new ArrayList<>();
+        
+        // Get users from enrollments
+        for (EnrollmentModel enrollment : this.enrollments) {
+            users.add(enrollment.getUser());
+        }
+
+        // Get users from instructors
+        users.addAll(this.instructors);
+
+        // Return the list
+        return users;
+    }
+
 
     // DTO conversion helper
     private <T extends CourseDTO> T fillInBasicInfo(T dto) {
