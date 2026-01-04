@@ -1,7 +1,9 @@
-package peerport.backend.dto;
+package peerport.backend.dto.content;
 
 import java.util.Date;
 import java.util.List;
+
+import peerport.backend.dto.FileDTO;
 
 public class ContentDTO {
     public String contentId;
