@@ -50,13 +50,19 @@ public class FileModel {
     @Column(name="\"dateUpdated\"")
     private Date dateUpdated;
 
+
     // Connections
     @OneToOne(mappedBy="image", orphanRemoval=true)
     private CourseModel course;
 
     @ManyToOne
-    @JoinColumn(name="\"files\"")
+    @JoinColumn(name="\"contentId\"")
     private ContentModel content;
+
+    @ManyToOne
+    @JoinColumn(name="\"announcementId\"")
+    private AnnouncementModel announcement;
+
 
     // Environment variables (ignored by JPA)
     @Transient

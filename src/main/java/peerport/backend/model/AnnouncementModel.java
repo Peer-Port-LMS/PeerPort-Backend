@@ -1,6 +1,7 @@
 package peerport.backend.model;
 
 import java.util.Date;
+import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -12,6 +13,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import peerport.backend.dto.AnnouncementDTO;
@@ -39,10 +41,14 @@ public class AnnouncementModel {
     @Column(name="\"dateUpdated\"", nullable=false)
     private Date dateUpdated;
 
+
     // Connections
     @ManyToOne
     @JoinColumn(name="\"courseId\"", nullable=false)
     private CourseModel course;
+
+    @OneToMany(mappedBy="announcement")
+    private List<FileModel> files;
 
 
     // Default constructor
