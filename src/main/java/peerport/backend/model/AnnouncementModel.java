@@ -47,7 +47,7 @@ public class AnnouncementModel {
     @JoinColumn(name="\"courseId\"", nullable=false)
     private CourseModel course;
 
-    @OneToMany(mappedBy="announcement")
+    @OneToMany(mappedBy="announcement", orphanRemoval=true)
     private List<FileModel> files;
 
 
