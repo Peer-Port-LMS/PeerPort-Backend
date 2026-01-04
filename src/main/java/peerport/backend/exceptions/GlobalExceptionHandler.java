@@ -1,6 +1,8 @@
 package peerport.backend.exceptions;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.MalformedURLException;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +26,16 @@ public class GlobalExceptionHandler {
     // Java exceptions
     @ExceptionHandler(IOException.class)
     public ResponseEntity<ErrorDTO> handleIOException(IOException ex, WebRequest request) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.INTERNAL_SERVER_ERROR.value(),
+            "Internal server error: " + ex.getMessage(),
+            request.getDescription(false).replace("uri=", "")
+        );
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorDTO);
+    }
+    
+    @ExceptionHandler(MalformedURLException.class)
+    public ResponseEntity<ErrorDTO> handleMalformedURLException(MalformedURLException ex, WebRequest request) {
         ErrorDTO errorDTO = new ErrorDTO(
             HttpStatus.INTERNAL_SERVER_ERROR.value(),
             "Internal server error: " + ex.getMessage(),
@@ -125,7 +137,17 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(errorDTO);
     }
 
-    
+    @ExceptionHandler(FileNotFoundException.class)
+    public ResponseEntity<ErrorDTO> handleFileNotFoundException(FileNotFoundException ex, WebRequest request) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.NOT_FOUND.value(),
+            "File with ID: " + ex.getMessage() + " not found.",
+            request.getDescription(false).replace("uri=", "")
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorDTO);
+    }
+
+
     // General exception handler
     @ExceptionHandler(FailedToParseFormDataException.class)
     public ResponseEntity<ErrorDTO> handleFailedToParseFormDataException(FailedToParseFormDataException ex, WebRequest request) {
