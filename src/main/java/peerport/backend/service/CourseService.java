@@ -295,6 +295,7 @@ public class CourseService {
         if (image != null) {
             // Save the courses image
             course.setImage(fileService.saveCourseImage(image, courseId));
+            courseRepository.save(course);
         }
 
         // Patch the course fields
