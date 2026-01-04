@@ -213,7 +213,13 @@ public class AnnouncementService {
      * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler
      */
     @Transactional
-    public AnnouncementModel updateAnnouncement(String announcementId, AnnouncementModel updatedAnnouncement, List<MultipartFile> files) throws IOException {
+    public AnnouncementModel updateAnnouncement(
+        String announcementId,
+        AnnouncementModel updatedAnnouncement,
+        List<MultipartFile> files,
+        List<String> removeFileIds,
+        Boolean replaceAll
+    ) throws IOException {
         // Check files
         if (files != null) {
             for (MultipartFile file : files) {
@@ -222,7 +228,7 @@ public class AnnouncementService {
                 }
             }
         }
-        
+
         // Get the announcement by ID
         AnnouncementModel announcement = getAnnouncementById(announcementId);
         
@@ -233,11 +239,8 @@ public class AnnouncementService {
         announcement.setTitle(updatedAnnouncement.getTitle());
         announcement.setContent(updatedAnnouncement.getContent());
 
-        if (files != null) {
-            // Save the files to the announcement
-            List<FileModel> savedFiles = fileService.saveAnnouncementFiles(files, announcement, announcement.getCourse().getCourseId());
-            announcement.getFiles().addAll(savedFiles);
-        }
+        // Remove / replace / add files
+        applyFileChanges(announcement, files, removeFileIds, replaceAll);
 
         // Update the announcement in the database
         announcementsRepository.save(announcement);
@@ -315,7 +318,13 @@ public class AnnouncementService {
      * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
      */
     @Transactional
-    public AnnouncementModel patchAnnouncement(String announcementId, AnnouncementModel patchedAnnouncement, List<MultipartFile> files) throws IOException {
+    public AnnouncementModel patchAnnouncement(
+        String announcementId,
+        AnnouncementModel patchedAnnouncement,
+        List<MultipartFile> files,
+        List<String> removeFileIds,
+        Boolean replaceAll
+    ) throws IOException {
         // Check files
         if (files != null) {
             for (MultipartFile file : files) {
@@ -324,22 +333,20 @@ public class AnnouncementService {
                 }
             }
         }
-        
+
         // Get the announcement by ID
         AnnouncementModel announcement = getAnnouncementById(announcementId);
 
-        if (files != null) {
-            // Save the files to the announcement
-            List<FileModel> savedFiles = fileService.saveAnnouncementFiles(files, announcement, announcement.getCourse().getCourseId());
-            announcement.getFiles().addAll(savedFiles);
+        // Remove / replace / add files
+        applyFileChanges(announcement, files, removeFileIds, replaceAll);
 
-            // Update the announcement in the database
-            announcementsRepository.save(announcement);
-        }
+        // Update the announcement in the database
+        announcementsRepository.save(announcement);
 
         // Return the updated announcement
         return patchAnnouncement(announcement, patchedAnnouncement);
     }
+
 
     /**
      * Delete announcement by ID
@@ -396,5 +403,56 @@ public class AnnouncementService {
 
         // Check if user is allowed to edit
         userAllowedToEditAnnouncement(announcement);
+    }
+
+
+    /**
+     * Apply file changes to announcement
+     * 
+     * @param announcement - The announcement to apply changes to
+     * @param filesToAdd - The files to add
+     * @param removeFileIds - The IDs of files to remove
+     * @param replaceAll - Whether to replace all existing files
+     * @throws IOException If there was an error saving the files
+     */
+    private void applyFileChanges(
+        AnnouncementModel announcement,
+        List<MultipartFile> filesToAdd,
+        List<String> removeFileIds,
+        Boolean replaceAll
+    ) throws IOException {
+        // Ensure collection exists
+        if (announcement.getFiles() == null) {
+            announcement.setFiles(new ArrayList<>());
+        }
+
+        // If replaceAll=true, delete everything first
+        if (Boolean.TRUE.equals(replaceAll)) {
+            for (FileModel existing : new ArrayList<>(announcement.getFiles())) {
+                fileService.deleteFile(existing);
+            }
+            announcement.getFiles().clear();
+        } else if (removeFileIds != null) {
+            // Remove specific files
+            List<FileModel> remaining = new ArrayList<>();
+            for (FileModel existing : announcement.getFiles()) {
+                if (removeFileIds.contains(existing.getFileId())) {
+                    fileService.deleteFile(existing);
+                } else {
+                    remaining.add(existing);
+                }
+            }
+            announcement.setFiles(remaining);
+        }
+
+        // Add new files
+        if (filesToAdd != null) {
+            List<FileModel> savedFiles = fileService.saveAnnouncementFiles(
+                filesToAdd,
+                announcement,
+                announcement.getCourse().getCourseId()
+            );
+            announcement.getFiles().addAll(savedFiles);
+        }
     }
 }
