@@ -191,6 +191,10 @@ public class CourseModel {
         return assignments;
     }
 
+    public List<ContentModel> getContent() {
+        return content;
+    }
+
     public FileModel getImage() {
         return image;
     }
