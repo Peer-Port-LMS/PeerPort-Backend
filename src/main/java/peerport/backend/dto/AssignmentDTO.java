@@ -1,6 +1,7 @@
 package peerport.backend.dto;
 
 import java.util.Date;
+import java.util.List;
 
 public class AssignmentDTO {
     public String assignmentId;
@@ -11,4 +12,5 @@ public class AssignmentDTO {
     public Boolean visible;
     public Date dateCreated;
     public Date dateUpdated;
+    public List<FileDTO> files;
 }
