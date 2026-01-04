@@ -78,6 +78,11 @@ public class FileService {
             if (file.getAnnouncement().getCourse().getUsers().contains(currentUser)) {
                 return file;
             }
+        } else if (file.getAssignmentSubmission() != null) {
+            // Check if the user is allowed to access the assignment submission
+            if (file.getAssignmentSubmission().getUser().getUserId().equals(currentUser.getUserId())) {
+                return file;
+            }
         }
 
         // File is not associated with any entity
