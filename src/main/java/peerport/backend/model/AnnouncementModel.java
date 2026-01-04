@@ -1,11 +1,13 @@
 package peerport.backend.model;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -47,8 +49,8 @@ public class AnnouncementModel {
     @JoinColumn(name="\"courseId\"", nullable=false)
     private CourseModel course;
 
-    @OneToMany(mappedBy="announcement", orphanRemoval=true)
-    private List<FileModel> files;
+    @OneToMany(mappedBy="announcement", cascade=CascadeType.ALL, orphanRemoval=true)
+    private List<FileModel> files = new ArrayList<>();
 
 
     // Default constructor
@@ -114,6 +116,18 @@ public class AnnouncementModel {
 
     public void setCourse(CourseModel course) {
         this.course = course;
+    }
+
+    public void setFiles(List<FileModel> files) {
+        this.files = files;
+    }
+
+    public void addFile(FileModel file) {
+        this.files.add(file);
+    }
+
+    public List<FileModel> getFiles() {
+        return files;
     }
 
 
