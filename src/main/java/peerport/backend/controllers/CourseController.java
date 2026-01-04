@@ -3,16 +3,18 @@ package peerport.backend.controllers;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import jakarta.validation.groups.Default;
 import peerport.backend.dto.CourseDTO;
 import peerport.backend.exceptions.FailedToParseFormDataException;
@@ -39,6 +41,8 @@ public class CourseController {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private Validator validator;
     
     // Environment variables 
     @Value("${file.upload-size-limit}")
@@ -98,7 +102,7 @@ public class CourseController {
     @PostMapping
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<CourseDTO> createCourse(
-        @Validated({OnCreate.class, Default.class}) @RequestPart(value="course", required=false)  String courseJsonFromForm,
+        @RequestPart(value="course", required=false) String courseJsonFromForm,
         @RequestPart(value="image", required=true) MultipartFile image
     ) throws IOException {
         // Convert json to CourseModel object
@@ -110,6 +114,26 @@ public class CourseController {
         // Catch JSON parsing exceptions
         } catch (JacksonException e) {
             throw new FailedToParseFormDataException("Invalid JSON format for course data: " + courseJsonFromForm);
+        }
+        
+        if (courseFromForm != null) {
+            // Validate the courseModel
+            Set<ConstraintViolation<CourseModel>> violations = validator.validate(courseFromForm, OnCreate.class, Default.class);
+
+            // Check if the validation failed
+            if (!violations.isEmpty()) {
+                // Collect violation messages
+                StringBuilder sb = new StringBuilder();
+                for (ConstraintViolation<CourseModel> violation : violations) {
+                    sb.append(violation.getPropertyPath().toString())
+                        .append(" ")
+                        .append(violation.getMessage())
+                        .append("; ");
+                }
+                
+                // Throw exception with all violation messages
+                throw new FailedToParseFormDataException("Course data validation failed: " + sb.toString());
+            }
         }
 
         // Create the course
