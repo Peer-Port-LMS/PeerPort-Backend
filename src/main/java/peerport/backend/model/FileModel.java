@@ -63,6 +63,10 @@ public class FileModel {
     @JoinColumn(name="\"announcementId\"")
     private AnnouncementModel announcement;
 
+    @ManyToOne
+    @JoinColumn(name="\"assignmentId\"")
+    private AssignmentModel assignment;
+
 
     // Environment variables (ignored by JPA)
     @Transient
@@ -144,6 +148,14 @@ public class FileModel {
 
     public void setAnnouncement(AnnouncementModel announcement) {
         this.announcement = announcement;
+    }
+
+    public AssignmentModel getAssignment() {
+        return assignment;
+    }
+
+    public void setAssignment(AssignmentModel assignment) {
+        this.assignment = assignment;
     }
 
     public Date getDateCreated() {
