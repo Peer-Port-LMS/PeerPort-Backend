@@ -14,6 +14,7 @@ import peerport.backend.dto.ErrorDTO;
 import peerport.backend.exceptions.assignments.AssignmentNotFoundException;
 import peerport.backend.exceptions.content.ContentNotFoundException;
 import peerport.backend.exceptions.announcements.AnnouncementNotFoundException;
+import peerport.backend.exceptions.assignmentSubmissions.AssignmentSubmissionNotFoundException;
 import peerport.backend.exceptions.courses.CourseNotFoundException;
 import peerport.backend.exceptions.files.FileSizeLimitExceededException;
 import peerport.backend.exceptions.files.InvalidFileTypeException;
@@ -120,6 +121,18 @@ public class GlobalExceptionHandler {
     // Assignment exceptions
     @ExceptionHandler(AssignmentNotFoundException.class)
     public ResponseEntity<ErrorDTO> handleAssignmentNotFoundException(AssignmentNotFoundException ex, WebRequest request) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.NOT_FOUND.value(),
+            ex.getMessage(),
+            request.getDescription(false).replace("uri=", "")
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorDTO);
+    }
+
+
+    // Assignment Submission exceptions
+    @ExceptionHandler(AssignmentSubmissionNotFoundException.class)
+    public ResponseEntity<ErrorDTO> handleAssignmentSubmissionNotFoundException(AssignmentSubmissionNotFoundException ex, WebRequest request) {
         ErrorDTO errorDTO = new ErrorDTO(
             HttpStatus.NOT_FOUND.value(),
             ex.getMessage(),
