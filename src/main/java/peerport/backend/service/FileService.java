@@ -19,6 +19,7 @@ import peerport.backend.database.FilesRepository;
 import peerport.backend.model.ContentModel;
 import peerport.backend.exceptions.files.InvalidFileTypeException;
 import peerport.backend.model.AnnouncementModel;
+import peerport.backend.model.AssignmentModel;
 import peerport.backend.model.FileModel;
 import peerport.backend.model.UserModel;
 import peerport.backend.model.RoleModel.Role;
@@ -94,14 +95,21 @@ public class FileService {
     public List<FileModel> saveContentFiles(List<MultipartFile> files, ContentModel content, String courseId) throws IOException {
         List<FileModel> savedFiles = new ArrayList<>();
 
-        int position = 1;
+        long baseTimestamp = System.currentTimeMillis();
+        int fileCounter = 0;
+        
         for (MultipartFile file : files) {
             if (file == null || file.isEmpty()) {
                 continue;
             }
 
             String fileExtension = getFileExtension(file.getOriginalFilename());
-            String fileName = "content_" + content.getContentId() + "_" + position + (fileExtension.isEmpty() ? "" : "." + fileExtension);
+            String fileName = String.format("content_%s_%d_%d%s",
+                content.getContentId(),
+                baseTimestamp,
+                fileCounter,
+                fileExtension.isEmpty() ? "" : "." + fileExtension
+            );
 
             String contentType = file.getContentType();
             if (contentType == null) {
@@ -110,7 +118,7 @@ public class FileService {
 
             String savedFilePath = saveFile(
                 file,
-                this.uploadDir + "/" + this.coursesDir + "/" + courseId + "/content/" + fileName
+                this.uploadDir + "/" + this.coursesDir + "/" + courseId + "/content/" + content.getContentId() + "/" + fileName
             );
 
             FileModel newFile = new FileModel(fileName, savedFilePath, fileExtension, contentType);
@@ -118,7 +126,7 @@ public class FileService {
 
             FileModel savedFile = filesRepository.save(newFile);
             savedFiles.add(savedFile);
-            position++;
+            fileCounter++;
         }
 
         return savedFiles;
@@ -171,8 +179,9 @@ public class FileService {
     public List<FileModel> saveAnnouncementFiles(List<MultipartFile> files, AnnouncementModel announcement, String courseId) throws IOException {
         List<FileModel> savedFiles = new ArrayList<>();
 
-        // Go through each file
-        int position = 1;
+        long baseTimestamp = System.currentTimeMillis();
+        int fileCounter = 0;
+        
         for (MultipartFile file : files) {
             // Skip empty files
             if (file == null || file.isEmpty()) {
@@ -183,7 +192,12 @@ public class FileService {
             String fileExtension = getFileExtension(file.getOriginalFilename());
 
             // Create the new file name
-            String fileName = "announcement_" + announcement.getAnnouncementId() + "_" + position + (fileExtension.isEmpty() ? "" : "." + fileExtension);
+            String fileName = String.format("announcement_%s_%d_%d%s",
+                announcement.getAnnouncementId(),
+                baseTimestamp,
+                fileCounter,
+                fileExtension.isEmpty() ? "" : "." + fileExtension
+            );
 
             // Get the content type
             String contentType = file.getContentType();
@@ -194,7 +208,7 @@ public class FileService {
             // Save the file
             String savedFilePath = saveFile(
                 file, 
-                this.uploadDir + "/" + this.coursesDir + "/" + courseId + "/announcements/" + fileName
+                this.uploadDir + "/" + this.coursesDir + "/" + courseId + "/announcements/" + announcement.getAnnouncementId() + "/" + fileName
             );
 
             // Create the new FileModel
@@ -207,11 +221,61 @@ public class FileService {
             FileModel savedFile = filesRepository.save(newFile);
             savedFiles.add(savedFile);
             
-            // Add to our position tracker
-            position++;
+            // Increment counter
+            fileCounter++;
         }
 
         // Return the saved files
+        return savedFiles;
+    }
+
+    /**
+     * Saves assignment files
+     * 
+     * @param files - List of files to save
+     * @param assignment - AssignmentModel to associate files with
+     * @param courseId - ID of the course
+     * @return List of saved FileModels
+     * @throws IOException If there was an error saving the files
+     */
+    @Transactional
+    public List<FileModel> saveAssignmentFiles(List<MultipartFile> files, AssignmentModel assignment, String courseId) throws IOException {
+        List<FileModel> savedFiles = new ArrayList<>();
+        
+        long baseTimestamp = System.currentTimeMillis();
+        int fileCounter = 0;
+        
+        for (MultipartFile file : files) {
+            if (file == null || file.isEmpty()) {
+                continue;
+            }
+            
+            String fileExtension = getFileExtension(file.getOriginalFilename());
+            String fileName = String.format("%d_%d%s",
+                baseTimestamp,
+                fileCounter,
+                fileExtension.isEmpty() ? "" : "." + fileExtension
+            );
+            
+            String contentType = file.getContentType();
+            if (contentType == null) {
+                contentType = "application/octet-stream";
+            }
+            
+            String savedFilePath = saveFile(
+                file,
+                this.uploadDir + "/" + this.coursesDir + "/" + courseId + "/assignments/" + assignment.getAssignmentId() + "/" + fileName
+            );
+            
+            FileModel newFile = new FileModel(fileName, savedFilePath, fileExtension, contentType);
+            newFile.setAssignment(assignment);
+            
+            FileModel savedFile = filesRepository.save(newFile);
+            savedFiles.add(savedFile);
+            
+            fileCounter++;
+        }
+        
         return savedFiles;
     }
 
