@@ -183,11 +183,19 @@ public class AssignmentSubmissionService {
         // Get the assignment
         AssignmentModel assignment = assignmentService.getAssignmentById(assignmentId);
 
-        // Save the assignment submission files
-        submission.setSubmittedFiles(fileService.saveAssignmentSubmissionFiles(files, assignment, submission));
+        // First, save the submission so that it has an ID which can be used to link files
+        AssignmentSubmissionModel savedSubmission = createAssignmentSubmission(submission, assignment);
 
-        // Save the submission
-        return createAssignmentSubmission(submission, assignment);
+        // Save the assignment submission files now that the submission has an ID
+        if (files != null && !files.isEmpty()) {
+            savedSubmission.setSubmittedFiles(
+                fileService.saveAssignmentSubmissionFiles(files, assignment, savedSubmission)
+            );
+            // Persist the relationship between the submission and its files
+            savedSubmission = assignmentSubmissionRepository.save(savedSubmission);
+        }
+
+        return savedSubmission;
     }
 
     /**
@@ -224,18 +232,23 @@ public class AssignmentSubmissionService {
         UserModel currentUser = authService.getCurrentUser();
         Role role = currentUser.getRole();
 
-        // If admin allow user to do whatever
         if (role == Role.ADMIN) return;
         
         // If the user is an instructor allow them to create or delete a submission
-        if (role == Role.INSTRUCTOR) return;
-
-        // If the user is a student only allow them to modify their own submissions
-        if (role == Role.STUDENT) {
-            if (submission.getUser().getUserId() != currentUser.getUserId()) {
+        if (role == Role.INSTRUCTOR) {
+            // Check if the instructor teaches the course the assignment belongs to
+            if (!currentUser.getTaughtCourses().contains(submission.getAssignment().getCourse())) {
                 throw new UserNotAuthorizedException("You are not authorized to modify this submission.");
             }
+            return;
         }
+
+        // If the user is a student only allow them to modify their own submissions
+        if (!submission.getUser().getUserId().equals(currentUser.getUserId())) {
+            throw new UserNotAuthorizedException("You are not authorized to modify this submission.");
+        }
+
+        return;
     }
 
     /**
