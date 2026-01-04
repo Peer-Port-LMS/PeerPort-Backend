@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.transaction.Transactional;
 import peerport.backend.database.FilesRepository;
 import peerport.backend.exceptions.files.InvalidFileTypeException;
 import peerport.backend.model.FileModel;
@@ -44,12 +47,13 @@ public class FileService {
      * @throws IOException If there was an error saving the file
      * @throws InvalidFileTypeException If the file type is invalid (Gets handled in GlobalExceptionHandler)
      */
+    @Transactional
     public FileModel saveCourseImage(MultipartFile file, String courseId) throws IOException {
         // Get the file extension
         String fileExtension = getFileExtension(file.getOriginalFilename());
 
         // Create the new file name
-        String fileName = "course_" + courseId + (fileExtension.isEmpty() ? "" : "." + fileExtension);
+        String fileName = "course_" + courseId + fileExtension;
 
         // Get the content type
         String contentType = file.getContentType();
@@ -58,13 +62,67 @@ public class FileService {
         }
 
         // Save the image
-        String savedImagePath = saveFile(file, this.uploadDir + "/" + this.coursesDir + "/" + fileName);
+        String savedImagePath = saveFile(file, this.uploadDir + "/" + this.coursesDir + "/" + courseId + "/" + fileName);
 
         // Create the new FileModel
         FileModel newFile = new FileModel(fileName, savedImagePath, fileExtension, contentType);
 
         // Save the file model to the database
         return filesRepository.save(newFile);
+    }
+
+    /**
+     * Saves files attached to an announcement
+     * 
+     * @param files - The list of files to save
+     * @param announcementId - The ID of the announcement
+     * @param courseId - The ID of the course
+     * @return The list of saved FileModels
+     * @throws IOException If there was an error saving the files
+     */
+    @Transactional
+    public List<FileModel> saveAnnouncementFiles(List<MultipartFile> files, String announcementId, String courseId) throws IOException {
+        List<FileModel> savedFiles = new ArrayList<>();
+
+        // Go through each file
+        int position = 1;
+        for (MultipartFile file : files) {
+            // Skip empty files
+            if (file==null || file.isEmpty()) {
+                continue;
+            }
+
+            // Get the file extension
+            String fileExtension = getFileExtension(file.getOriginalFilename());
+
+            // Create the new file name
+            String fileName = "announcement_" + announcementId + position + fileExtension;
+
+            // Get the content type
+            String contentType = file.getContentType();
+            if (contentType == null) {
+                contentType = "application/octet-stream"; // Default binary type
+            }
+
+            // Save the file
+            String savedFilePath = saveFile(
+                file, 
+                this.uploadDir + "/" + this.coursesDir + "/" + courseId + "/announcements/" + fileName
+            );
+
+            // Create the new FileModel
+            FileModel newFile = new FileModel(fileName, savedFilePath, fileExtension, contentType);
+
+            // Save the file model to the database
+            FileModel savedFile = filesRepository.save(newFile);
+            savedFiles.add(savedFile);
+            
+            // Add to our position tracker
+            position++;
+        }
+
+        // Return the saved files
+        return savedFiles;
     }
 
     // Delete a file
