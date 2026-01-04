@@ -19,7 +19,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -89,7 +88,7 @@ public class AssignmentSubmissionController {
      * @throws UserNotAuthorizedException If the user is not authorized to submit to the assignment (Handled in GlobalExceptionHandler)
      */
     @PostMapping("/{assignmentId}")
-    public ResponseEntity<AssignmentSubmissionDTO> createSubmission(@RequestParam String assignmentId, @RequestBody AssignmentSubmissionModel submissionData) {
+    public ResponseEntity<AssignmentSubmissionDTO> createSubmission(@PathVariable String assignmentId, @RequestBody AssignmentSubmissionModel submissionData) {
         // Create the assignment submission
         AssignmentSubmissionModel submission = assignmentSubmissionService.createAssignmentSubmission(submissionData, assignmentId);
 
@@ -113,7 +112,7 @@ public class AssignmentSubmissionController {
      */
     @PostMapping(value="/{assignmentId}", consumes=MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<AssignmentSubmissionDTO> createSubmission(
-        @RequestParam String assignmentId, 
+        @PathVariable String assignmentId, 
         @RequestPart(value="submission", required=true) AssignmentSubmissionModel submissionData,
         @RequestPart(value="files", required=false) List<MultipartFile> files
     ) throws IOException {
