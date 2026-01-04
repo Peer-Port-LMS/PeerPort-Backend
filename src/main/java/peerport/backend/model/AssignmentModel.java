@@ -55,7 +55,7 @@ public class AssignmentModel {
 
     // Connections
     @ManyToOne
-    @JoinColumn(name="\"assignnments\"", nullable=false)
+    @JoinColumn(name="\"assignments\"", nullable=false)
     private CourseModel course;
 
     @OneToMany(mappedBy="assignment", cascade=CascadeType.ALL, orphanRemoval=true)
