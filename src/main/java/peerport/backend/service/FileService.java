@@ -301,7 +301,9 @@ public class FileService {
         int fileCounter = 0;
         
         for (MultipartFile file : files) {
-            if (file == null || file.isEmpty()) continue;
+            if (file == null || file.isEmpty()) {
+                continue;
+            }
             
             // Get the file extension
             String fileExtension = getFileExtension(file.getOriginalFilename());
