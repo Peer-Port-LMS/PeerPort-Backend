@@ -1,6 +1,6 @@
 # PeerPort Backend
 
-A Spring Boot-based Learning Management System (LMS) backend that provides RESTful APIs for course management, assignments, announcements, content delivery, and user authentication.
+A Spring Boot-based Learning Management System (LMS) backend that provides RESTful APIs for the frontend
 
 ## Table of Contents
 
@@ -11,9 +11,11 @@ A Spring Boot-based Learning Management System (LMS) backend that provides RESTf
 - [File Upload Configuration](#file-upload-configuration)
 - [Running the Application](#running-the-application)
 - [Architecture Overview](#architecture-overview)
-- [API Endpoints](#api-endpoints)
-- [TODO](#todo)
-- [Coming Soon](#coming-soon)
+- [Roadmap & Version Planning](#roadmap--version-planning)
+  - [MVP](#mvp-minimum-viable-product)
+  - [Version 1.0](#version-10-post-mvp)
+  - [Version 2.0](#version-20-future-enhancement)
+  - [Future Considerations](#future-considerations)
 
 ## Prerequisites
 
@@ -28,7 +30,7 @@ A Spring Boot-based Learning Management System (LMS) backend that provides RESTf
 
 ```bash
 git clone https://github.com/Peer-Port-LMS/PeerPort-Backend.git
-cd backend
+cd PeerPort-Backend
 ```
 
 ### 2. Install Dependencies
@@ -48,23 +50,23 @@ This will download all required dependencies defined in `pom.xml`.
 2. **Create a Database**
 
 ```sql
-CREATE DATABASE pp_prod;
+CREATE DATABASE YOUR_DATABASE_NAME;
 ```
 
 3. **Configure Database Credentials**
 
-Edit `src/main/resources/application.properties` and update the following properties:
+Copy `src/main/resources/application.properties.example` and rename it to: `src/main/resources/application.properties` then update the following properties:
 
 ```properties
 # Database Configuration
-spring.datasource.url=jdbc:postgresql://localhost:5432/pp_prod
+spring.datasource.url=jdbc:postgresql://YOUR_DATABASE_URL/YOUR_DATABASE_NAME
 spring.datasource.username=YOUR_DB_USERNAME
 spring.datasource.password=YOUR_DB_PASSWORD
 ```
 
 Replace:
-- `localhost:5432` with your PostgreSQL server host and port if different
-- `pp_prod` with your database name
+- `YOUR_DATABASE_URL` with your PostgreSQL server host and port if different
+- `YOUR_DATABASE_NAME` with your database name
 - `YOUR_DB_USERNAME` with your PostgreSQL username
 - `YOUR_DB_PASSWORD` with your PostgreSQL password
 
@@ -80,8 +82,8 @@ The application uses Hibernate with `spring.jpa.hibernate.ddl-auto=update`, whic
 2. Click **New OAuth App**
 3. Fill in the application details:
    - **Application name**: PeerPort LMS (or your preferred name)
-   - **Homepage URL**: `http://localhost:8080`
-   - **Authorization callback URL**: `http://localhost:8080/login/oauth2/code/github`
+   - **Homepage URL**: `YOUR_FRONTEND_URL`
+   - **Authorization callback URL**: `http://WHERE_YOUR_HOSTING_THIS/login/oauth2/code/github`
 4. Click **Register application**
 5. Copy the **Client ID** and generate a **Client Secret**
 
@@ -99,7 +101,7 @@ Replace:
 - `YOUR_GITHUB_CLIENT_ID` with your GitHub OAuth App Client ID
 - `YOUR_GITHUB_CLIENT_SECRET` with your GitHub OAuth App Client Secret
 
-### CORS Configuration
+### CORS Configuration <small>(To be added soon)</small>
 
 The application is configured to allow requests from `http://localhost:5173` (frontend dev server). If your frontend runs on a different port, update the CORS configuration in:
 
@@ -132,9 +134,11 @@ Update the path if you want to use a different location. The path can be relativ
 The application has the following upload limits:
 
 ```properties
+file.upload-size-limit=5242880
 spring.servlet.multipart.max-file-size=10MB
 spring.servlet.multipart.max-request-size=10MB
 ```
+5MB: 5242880
 
 ## Running the Application
 
@@ -164,32 +168,15 @@ backend/
 │   ├── config/
 │   │   └── SecurityConfig.java          # Security & CORS configuration
 │   ├── controllers/                     # REST API endpoints
-│   │   ├── AuthController.java          # Authentication endpoints
-│   │   ├── CourseController.java        # Course management
-│   │   ├── AssignmentController.java    # Assignment management
-│   │   ├── AnnouncementController.java  # Announcement management
-│   │   ├── ContentController.java       # Content management
-│   │   ├── FileController.java          # File serving
-│   │   ├── EnrollmentController.java    # Enrollment management
-│   │   └── UserController.java          # User management
+|   ├── exceptions/                      # Custom exceptions
 │   ├── model/                           # JPA entity models
-│   │   ├── CourseModel.java             # Course entity
-│   │   ├── UserModel.java               # User entity with OAuth2
-│   │   ├── AssignmentModel.java         # Assignment entity
-│   │   ├── AnnouncementModel.java       # Announcement entity
-│   │   ├── ContentModel.java            # Hierarchical content entity
-│   │   ├── FileModel.java               # File metadata entity
-│   │   ├── EnrollmentModel.java         # Student enrollment entity
-│   │   └── RoleModel.java               # User role enum
 │   ├── dto/                             # Data Transfer Objects
 │   ├── service/                         # Business logic layer
 │   ├── database/                        # JPA repositories
-│   ├── validation/                      # Custom validators
-│   │   └── CourseValidator.java         # Date validation
-│   └── utils/                           # Utility classes
+│   └── validation/                      # Custom validators
 ├── src/main/resources/
-│   ├── application.properties           # Application configuration
-│   └── static/
+|   ├── META-INF                         # Metadata about fields in .properties
+│   └── application.properties           # Application configuration
 └── pom.xml                              # Maven dependencies
 ```
 
@@ -208,31 +195,32 @@ backend/
 
 #### Controllers
 REST API endpoints that handle HTTP requests and responses. Each controller manages a specific domain:
-- **AuthController**: OAuth2 authentication flow
-- **CourseController**: CRUD operations for courses with image upload
-- **AssignmentController**: Assignment lifecycle management
-- **AnnouncementController**: Course announcements
-- **ContentController**: Hierarchical content structure
-- **FileController**: File download/serving
-- **EnrollmentController**: Student course enrollments
-- **UserController**: User management
+- **AuthController**: OAuth2 authentication flow with provider redirects (GitHub, etc.)
+- **CourseController**: Full CRUD operations for courses including image uploads, course filtering, and instructor management
+- **AssignmentController**: Complete assignment lifecycle (create, read, update, delete) with visibility controls and due date management
+- **AnnouncementController**: Course announcements with creation, updates, and deletion capabilities
+- **ContentController**: Hierarchical content structure management with parent-child relationships
+- **FileController**: File download/serving with secure file access and metadata handling
+- **EnrollmentController**: Student course enrollment management and enrollment records
+- **UserController**: User profile management and user data retrieval
 
 #### Models
 JPA entities that map to database tables:
-- **CourseModel**: Course information with dates, instructors, and relationships
-- **UserModel**: User accounts with OAuth2 provider data and roles
-- **AssignmentModel**: Assignments with due dates and visibility
-- **AnnouncementModel**: Course announcements with timestamps
-- **ContentModel**: Hierarchical content (supports parent-child relationships)
-- **FileModel**: File metadata and storage paths
-- **EnrollmentModel**: Student-course enrollment records
+- **CourseModel**: Course information including title, description, start/end dates, image references, and many-to-many instructor relationships
+- **UserModel**: User accounts with OAuth2 provider authentication, profile pictures, ID numbers, and role-based access control
+- **AssignmentModel**: Assignments with names, descriptions, due dates, point values, and visibility flags
+- **AnnouncementModel**: Course announcements with titles, content, creation/update timestamps, and course associations
+- **ContentModel**: Hierarchical content structure supporting parent-child relationships for organizing course materials
+- **FileModel**: File metadata and storage paths with secure file serving and cleanup on deletion
+- **EnrollmentModel**: Student-course enrollment records with enrollment dates and completion tracking
+- **RoleModel**: Enum-based user roles (STUDENT, INSTRUCTOR, ADMIN) for role-based access control
 
 #### Database Layer
 Spring Data JPA repositories for database access with automatic query generation and custom query methods.
 
 #### Validation
 Custom validators and Jakarta validation annotations ensure data integrity:
-- **CourseValidator**: Validates course start/end dates
+- **ValidEndDateAfterStartDate**: Validates start/end dates
 - Bean validation annotations: `@NotNull`, `@Size`, `@Email`, etc.
 
 #### Security
@@ -243,63 +231,15 @@ Role-based access control (RBAC) with three roles:
 
 ### Database Relationships
 
-- **User ↔ Course**: Many-to-Many (instructors can teach multiple courses)
-- **User → Enrollment**: One-to-Many (students can enroll in multiple courses)
-- **Course → Assignment**: One-to-Many
-- **Course → Announcement**: One-to-Many
-- **Course → Content**: One-to-Many
-- **Course → File**: One-to-One (course image)
-- **Content → File**: One-to-Many (attachments)
-- **Content → Content**: Self-referential (hierarchical structure)
-
-## API Endpoints
-
-### Authentication
-- `GET /auth/user` - Get authenticated user information
-- `GET /auth/login` - Initiate OAuth2 login flow
-
-### Courses
-- `GET /courses` - Get all courses (Admin only)
-- `GET /courses/{id}` - Get course by ID with details
-- `POST /courses` - Create new course (Admin/Instructor)
-- `PUT /courses/{id}` - Update course (Admin/Instructor)
-- `DELETE /courses/{id}` - Delete course (Admin/Instructor)
-
-**Authorization**: STUDENT, INSTRUCTOR, ADMIN
-
-### Assignments
-- `GET /assignments` - Get all assignments with course info
-- `GET /assignments/{id}` - Get assignment by ID
-- `POST /assignments` - Create new assignment
-- `PUT /assignments/{id}` - Update assignment
-- `PATCH /assignments/{id}` - Partial update
-- `DELETE /assignments/{id}` - Delete assignment
-
-### Announcements
-- `GET /announcements` - Get all announcements
-- `GET /announcements/{id}` - Get announcement by ID
-- `POST /announcements` - Create announcement
-- `PUT /announcements/{id}` - Update announcement
-- `PATCH /announcements/{id}` - Partial update
-- `DELETE /announcements/{id}` - Delete announcement
-
-### Content
-- `GET /content` - Get all content with hierarchy
-- `GET /content/{id}` - Get content by ID with details
-- `POST /content` - Create content
-- `PUT /content/{id}` - Update content
-- `PATCH /content/{id}` - Partial update
-- `DELETE /content/{id}` - Delete content
-
-### Files
-- `GET /files/{id}` - Download/view file by ID
-
-### Enrollments
-- `GET /enrollments` - Get all enrollments
-- `GET /enrollments/{id}` - Get enrollment by ID
-- `POST /enrollments` - Create enrollment
-- `PUT /enrollments/{id}` - Update enrollment
-- `DELETE /enrollments/{id}` - Delete enrollment
+- **User ↔ Course**: Many-to-Many (via CourseInstructors join table; instructors can teach multiple courses)
+- **User → Enrollment**: One-to-Many (users have multiple enrollment records for different courses)
+- **Enrollment ← User & Course**: Composite relationship (enrollment acts as a join table with metadata like dateEnrolled and dateCompleted)
+- **Course → Assignment**: One-to-Many (each course has multiple assignments)
+- **Course → Announcement**: One-to-Many (each course has multiple announcements)
+- **Course → Content**: One-to-Many (each course has hierarchical content)
+- **Content → Content**: Self-referential Many-to-One (supports hierarchical parent-child structure)
+- **Content → File**: One-to-Many (content can have multiple file attachments)
+- **Course → File**: One-to-One (course image reference)
 
 **Authorization**: ADMIN, INSTRUCTOR only
 
@@ -308,48 +248,202 @@ User management endpoints
 
 **Authorization**: STUDENT, INSTRUCTOR, ADMIN
 
-## TODO
-
-### High Priority
-- [ ] Enable CSRF protection in SecurityConfig (currently disabled)
-- [ ] Implement assignment submission system
-- [ ] Add grading functionality
-- [ ] Implement file permissions and access control
-
-### Features
-- [ ] Add discussion forums
-- [ ] Implement email notifications
-- [ ] Create analytics dashboard
-- [ ] Add student progress tracking
-- [ ] Implement grade book
-- [ ] Add rubrics for assignments
-- [ ] Support for quizzes and online tests
-- [ ] Rich text editor for content
-- [ ] Video embedding support
-
-### Improvements
-- [ ] Add rate limiting
-- [ ] Improve input sanitization
-- [ ] Enhanced file type validation
-- [ ] Bulk user import functionality
-- [ ] SCORM content support
-
-### Testing & Documentation
-- [ ] Add unit tests
-- [ ] Add integration tests
-- [ ] Add end-to-end tests
-- [ ] Create user guides
-- [ ] Document deployment procedures
-
-## Coming Soon
-
-### Swagger/OpenAPI Documentation
-Interactive API documentation will be available soon, allowing you to:
-- Explore all API endpoints
-- Test API calls directly from the browser
-- View request/response schemas
-- Generate API client code
+## Roadmap & Version Planning
+<img src="https://img.shields.io/badge/status-complete-success" alt="Complete">
+<img src="https://img.shields.io/badge/status-in%20progress-yellow" alt="In Progress">
+<img src="https://img.shields.io/badge/status-not%20started-red" alt="Not Started">
 
 ---
 
-**Built using Spring Boot**
+## MVP (Minimum Viable Product)
+
+The MVP focuses on core LMS functionality: course management, basic content delivery, assignments, and announcements with essential grading support.
+
+### Core Features - MVP
+
+<details>
+<summary>Implement Courses <img src="https://img.shields.io/badge/status-in%20progress-yellow" alt="In Progress"></summary>
+
+- [x] Model implemented
+- [x] DTO implemented
+- [x] Service implemented
+- [x] Controller implemented
+- [ ] Verify functionality
+- [x] Add error messages
+- [x] Add javaDoc comments
+</details>
+
+<details>
+<summary>Implement Announcements <img src="https://img.shields.io/badge/status-in%20progress-yellow" alt="In Progress"></summary>
+
+- [x] Model implemented
+- [x] DTO implemented
+- [x] Service implemented
+- [x] Controller implemented
+- [ ] File attachment implemented
+- [ ] Verify functionality
+- [x] Add error messages
+- [x] Add javaDoc comments
+</details>
+
+<details>
+<summary>Implement Content <img src="https://img.shields.io/badge/status-in%20progress-yellow" alt="In Progress"></summary>
+
+- [x] Model implemented
+- [x] DTO implemented
+- [x] Service implemented
+- [x] Controller implemented
+- [ ] File attachment implemented
+- [ ] Verify functionality
+- [ ] Add error messages
+- [ ] Add javaDoc comments
+</details>
+
+<details>
+<summary>Implement Assignments <img src="https://img.shields.io/badge/status-in%20progress-yellow" alt="In Progress"></summary>
+
+- [x] Model implemented
+- [x] DTO implemented
+- [x] Service implemented
+- [x] Controller implemented
+- [ ] File attachment implemented
+- [ ] Verify functionality
+- [x] Add error messages
+- [x] Add javaDoc comments
+</details>
+
+<details>
+<summary>Implement Assignment Submissions <img src="https://img.shields.io/badge/status-not%20started-red" alt="Not Started"></summary>
+
+- [ ] Model implemented
+- [ ] DTO implemented
+- [ ] Service implemented
+- [ ] Controller implemented
+- [ ] File attachment implemented
+- [ ] Verify functionality
+- [ ] Add error messages
+- [ ] Add javaDoc comments
+</details>
+
+<details>
+<summary>Implement Basic Grading <img src="https://img.shields.io/badge/status-not%20started-red" alt="Not Started"></summary>
+
+- [ ] Grade Model implemented
+- [ ] Grade DTO implemented
+- [ ] Grade Service implemented
+- [ ] Grade Controller implemented
+- [ ] Verify functionality
+- [ ] Add error messages
+- [ ] Add javaDoc comments
+</details>
+
+<details>
+<summary>Testing & Documentation - MVP <img src="https://img.shields.io/badge/status-not%20started-red" alt="Not Started"></summary>
+
+- [ ] Swagger/OpenAPI implemented
+- [ ] Add unit tests for core features
+- [ ] Add integration tests
+- [ ] Create basic user guides
+- [ ] Document API endpoints
+</details>
+
+### MVP Priorities
+- [ ] Complete file attachment support for announcements and assignments
+- [ ] Finalize testing suite for MVP features
+- [ ] Complete API documentation
+- [ ] Perform security review before launch
+- [ ] Enable CSRF protection in SecurityConfig
+- [ ] Implement file permissions and access control
+
+---
+
+## Version 1.0 (Post-MVP)
+
+Enhanced features and improved user experience after MVP release.
+
+### Version 1.0 Features
+
+<details>
+<summary>Advanced Grading System <img src="https://img.shields.io/badge/status-not%20started-red" alt="Not Started"></summary>
+
+- [ ] Implement grade book
+- [ ] Add rubrics for assignments
+- [ ] Support for weighted grading
+- [ ] Grade distribution analytics
+</details>
+
+<details>
+<summary>Content Enhancements <img src="https://img.shields.io/badge/status-not%20started-red" alt="Not Started"></summary>
+
+- [ ] Rich text editor for content
+- [ ] Support for quizzes and online tests
+- [ ] SCORM content support
+- [ ] Media embedding capabilities
+</details>
+
+<details>
+<summary>Communication Features <img src="https://img.shields.io/badge/status-not%20started-red" alt="Not Started"></summary>
+
+- [ ] Add discussion forums
+- [ ] Implement email notifications
+</details>
+
+<details>
+<summary>Testing & Documentation - v1.0 <img src="https://img.shields.io/badge/status-not%20started-red" alt="Not Started"></summary>
+
+- [ ] Add end-to-end tests
+- [ ] Comprehensive API documentation
+- [ ] Create deployment guides
+- [ ] Performance testing and optimization
+</details>
+
+---
+
+## Version 2.0 (Future Enhancement)
+
+Advanced features and system optimization.
+
+### Version 2.0 Features
+
+<details>
+<summary>Analytics & Tracking <img src="https://img.shields.io/badge/status-not%20started-red" alt="Not Started"></summary>
+
+- [ ] Create analytics dashboard
+- [ ] Add student progress tracking
+- [ ] Implement learning analytics
+- [ ] Generate progress reports
+</details>
+
+<details>
+<summary>Administration Features <img src="https://img.shields.io/badge/status-not%20started-red" alt="Not Started"></summary>
+
+- [ ] Bulk user import functionality
+- [ ] Advanced user management
+- [ ] Custom role creation
+- [ ] Audit logging
+</details>
+
+<details>
+<summary>Performance & Security <img src="https://img.shields.io/badge/status-not%20started-red" alt="Not Started"></summary>
+
+- [ ] Add rate limiting
+- [ ] Implement caching strategies
+- [ ] Enhanced input sanitization
+- [ ] File storage migration (S3 buckets)
+- [ ] Advanced file type validation
+</details>
+
+---
+
+## Future Considerations
+
+<details>
+<summary>Advanced Features (Backlog)</summary>
+
+- [ ] Peer review system
+- [ ] Plagiarism detection integration
+- [ ] Mobile app support
+- [ ] Single Sign-On (SSO) integration
+- [ ] Advanced calendar/scheduling
+</details>
+
