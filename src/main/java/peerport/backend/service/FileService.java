@@ -19,6 +19,8 @@ import peerport.backend.database.FilesRepository;
 import peerport.backend.exceptions.files.InvalidFileTypeException;
 import peerport.backend.model.AnnouncementModel;
 import peerport.backend.model.FileModel;
+import peerport.backend.model.UserModel;
+import peerport.backend.model.RoleModel.Role;
 
 /**
  * Service for handling file and FileModel operations
@@ -28,14 +30,55 @@ public class FileService {
 
     @Autowired
     private FilesRepository filesRepository;
+
+    @Autowired
+    private AuthService authService;
+
     
     @Value("${file.upload-dir}")
     private String uploadDir;
     private String coursesDir = "courses";
 
     // Regular functions
-    public Optional<FileModel> getFileById(String fileId) {
-        return filesRepository.findById(fileId);
+    public FileModel getFileById(String fileId) throws FileNotFoundException {
+        // Get the file by ID
+        Optional<FileModel> fileOpt = filesRepository.findById(fileId);
+
+        // Check if the file exists
+        if (fileOpt.isEmpty()) {
+            throw new FileNotFoundException(fileId);
+        }
+
+        // Get the file
+        FileModel file = fileOpt.get();
+
+        // Get the current user and their role
+        UserModel currentUser = authService.getCurrentUser();
+        Role userRole = currentUser.getRole();
+
+        // If admin allow access
+        if (userRole == Role.ADMIN) return file;
+
+        // Check if user is allowed to access the file
+        if (file.getCourse() != null) {
+            // Check if the user is enrolled in the course
+            if (file.getCourse().getUsers().contains(currentUser)) {
+                return file;
+            }
+        } else if (file.getContent() != null) {
+            // Check if the user is allowed to access the content
+            if (file.getContent().getCourse().getUsers().contains(currentUser)) {
+                return file;
+            }
+        } else if (file.getAnnouncement() != null) {
+            // Check if the user is allowed to access the announcement
+            if (file.getAnnouncement().getCourse().getUsers().contains(currentUser)) {
+                return file;
+            }
+        }
+
+        // File is not associated with any entity
+        throw new FileNotFoundException("File with ID: " + fileId + " is not associated with any entity.");
     }
 
 
