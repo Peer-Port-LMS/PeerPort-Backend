@@ -289,6 +289,7 @@ public class FileService {
      * @return The list of saved FileModels
      * @throws IOException If there was an error saving the files
      */
+    @Transactional
     public List<FileModel> saveAssignmentSubmissionFiles(
         List<MultipartFile> files, 
         AssignmentModel assignment,
