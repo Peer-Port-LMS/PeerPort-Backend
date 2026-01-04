@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.transaction.Transactional;
 import peerport.backend.database.FilesRepository;
+import peerport.backend.model.ContentModel;
 import peerport.backend.exceptions.files.InvalidFileTypeException;
 import peerport.backend.model.AnnouncementModel;
 import peerport.backend.model.FileModel;
@@ -81,6 +82,48 @@ public class FileService {
         throw new FileNotFoundException("File with ID: " + fileId + " is not associated with any entity.");
     }
 
+    /**
+     * Saves files attached to content
+     * @param files - The list of files to save
+     * @param content - The content the files belong to
+     * @param courseId - The ID of the course
+     * @return The list of saved FileModels
+     * @throws IOException If there was an error saving the files
+     */
+    @Transactional
+    public List<FileModel> saveContentFiles(List<MultipartFile> files, ContentModel content, String courseId) throws IOException {
+        List<FileModel> savedFiles = new ArrayList<>();
+
+        int position = 1;
+        for (MultipartFile file : files) {
+            if (file == null || file.isEmpty()) {
+                continue;
+            }
+
+            String fileExtension = getFileExtension(file.getOriginalFilename());
+            String fileName = "content_" + content.getContentId() + "_" + position + (fileExtension.isEmpty() ? "" : "." + fileExtension);
+
+            String contentType = file.getContentType();
+            if (contentType == null) {
+                contentType = "application/octet-stream";
+            }
+
+            String savedFilePath = saveFile(
+                file,
+                this.uploadDir + "/" + this.coursesDir + "/" + courseId + "/content/" + fileName
+            );
+
+            FileModel newFile = new FileModel(fileName, savedFilePath, fileExtension, contentType);
+            newFile.setContent(content);
+
+            FileModel savedFile = filesRepository.save(newFile);
+            savedFiles.add(savedFile);
+            position++;
+        }
+
+        return savedFiles;
+    }
+
 
     // Specific functions
     /**
@@ -132,7 +175,7 @@ public class FileService {
         int position = 1;
         for (MultipartFile file : files) {
             // Skip empty files
-            if (file==null || file.isEmpty()) {
+            if (file == null || file.isEmpty()) {
                 continue;
             }
 
