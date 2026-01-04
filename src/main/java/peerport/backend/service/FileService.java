@@ -17,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.transaction.Transactional;
 import peerport.backend.database.FilesRepository;
 import peerport.backend.exceptions.files.InvalidFileTypeException;
+import peerport.backend.model.AnnouncementModel;
 import peerport.backend.model.FileModel;
 
 /**
@@ -53,7 +54,7 @@ public class FileService {
         String fileExtension = getFileExtension(file.getOriginalFilename());
 
         // Create the new file name
-        String fileName = "course_" + courseId + fileExtension;
+        String fileName = "course_" + courseId + (fileExtension.isEmpty() ? "" : "." + fileExtension);
 
         // Get the content type
         String contentType = file.getContentType();
@@ -75,13 +76,13 @@ public class FileService {
      * Saves files attached to an announcement
      * 
      * @param files - The list of files to save
-     * @param announcementId - The ID of the announcement
+     * @param announcement - The announcement the files belong to
      * @param courseId - The ID of the course
      * @return The list of saved FileModels
      * @throws IOException If there was an error saving the files
      */
     @Transactional
-    public List<FileModel> saveAnnouncementFiles(List<MultipartFile> files, String announcementId, String courseId) throws IOException {
+    public List<FileModel> saveAnnouncementFiles(List<MultipartFile> files, AnnouncementModel announcement, String courseId) throws IOException {
         List<FileModel> savedFiles = new ArrayList<>();
 
         // Go through each file
@@ -96,7 +97,7 @@ public class FileService {
             String fileExtension = getFileExtension(file.getOriginalFilename());
 
             // Create the new file name
-            String fileName = "announcement_" + announcementId + position + fileExtension;
+            String fileName = "announcement_" + announcement.getAnnouncementId() + "_" + position + (fileExtension.isEmpty() ? "" : "." + fileExtension);
 
             // Get the content type
             String contentType = file.getContentType();
@@ -112,6 +113,9 @@ public class FileService {
 
             // Create the new FileModel
             FileModel newFile = new FileModel(fileName, savedFilePath, fileExtension, contentType);
+
+            // Link back to parent announcement for ORM mapping
+            newFile.setAnnouncement(announcement);
 
             // Save the file model to the database
             FileModel savedFile = filesRepository.save(newFile);
