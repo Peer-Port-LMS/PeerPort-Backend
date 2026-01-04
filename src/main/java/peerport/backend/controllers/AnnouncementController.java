@@ -200,12 +200,16 @@ public class AnnouncementController {
     public ResponseEntity<AnnouncementDTO> updateAnnouncement(
         @PathVariable String announcementId, 
         @RequestPart(value="announcement", required=false) String jsonAnnouncementModel,
-        @RequestPart(value="files", required=false) List<MultipartFile> files
+        @RequestPart(value="files", required=false) List<MultipartFile> files,
+        @RequestPart(value="removeFileIds", required=false) List<String> removeFileIds,
+        @RequestPart(value="replaceAll", required=false) Boolean replaceAll
     ) throws IOException {
         // Convert json to AnnouncementModel object
         AnnouncementModel updatedAnnouncement;
         try {
-            updatedAnnouncement = objectMapper.readValue(jsonAnnouncementModel, AnnouncementModel.class);
+            updatedAnnouncement = jsonAnnouncementModel != null
+                ? objectMapper.readValue(jsonAnnouncementModel, AnnouncementModel.class)
+                : null;
 
         // Catch JSON parsing exceptions
         } catch (JacksonException e) {
@@ -234,7 +238,13 @@ public class AnnouncementController {
         }
 
         // Try to update announcement
-        AnnouncementModel updated = announcementService.updateAnnouncement(announcementId, updatedAnnouncement, files);
+        AnnouncementModel updated = announcementService.updateAnnouncement(
+            announcementId,
+            updatedAnnouncement,
+            files,
+            removeFileIds,
+            replaceAll
+        );
         
         // Return the updated announcement with 200 OK
         return ResponseEntity.ok(updated.toDTO());
@@ -275,12 +285,16 @@ public class AnnouncementController {
     public ResponseEntity<AnnouncementDTO> patchAnnouncement(
         @PathVariable String announcementId, 
         @RequestPart(value="announcement", required=false) String jsonAnnouncementModel,
-        @RequestPart(value="files", required=false) List<MultipartFile> files
+        @RequestPart(value="files", required=false) List<MultipartFile> files,
+        @RequestPart(value="removeFileIds", required=false) List<String> removeFileIds,
+        @RequestPart(value="replaceAll", required=false) Boolean replaceAll
     ) throws IOException {
         // Convert json to AnnouncementModel object
         AnnouncementModel patchedAnnouncementModel;
         try {
-            patchedAnnouncementModel = objectMapper.readValue(jsonAnnouncementModel, AnnouncementModel.class);
+            patchedAnnouncementModel = jsonAnnouncementModel != null
+                ? objectMapper.readValue(jsonAnnouncementModel, AnnouncementModel.class)
+                : null;
 
         // Catch JSON parsing exceptions
         } catch (JacksonException e) {
@@ -309,7 +323,13 @@ public class AnnouncementController {
         }
 
         // Try to patch announcement
-        AnnouncementModel patched = announcementService.patchAnnouncement(announcementId, patchedAnnouncementModel, files);
+        AnnouncementModel patched = announcementService.patchAnnouncement(
+            announcementId,
+            patchedAnnouncementModel,
+            files,
+            removeFileIds,
+            replaceAll
+        );
         
         // Return the patched announcement with 200 OK
         return ResponseEntity.ok(patched.toDTO());
