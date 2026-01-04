@@ -1,11 +1,14 @@
 package peerport.backend.model;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.validator.constraints.Length;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -13,6 +16,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -53,6 +57,9 @@ public class AssignmentModel {
     @ManyToOne
     @JoinColumn(name="\"assignnments\"", nullable=false)
     private CourseModel course;
+
+    @OneToMany(mappedBy="assignment", cascade=CascadeType.ALL, orphanRemoval=true)
+    private List<FileModel> files = new ArrayList<>();
 
 
     // Default constructor
@@ -145,6 +152,14 @@ public class AssignmentModel {
         this.course = course;
     }
 
+    public List<FileModel> getFiles() {
+        return files;
+    }
+
+    public void setFiles(List<FileModel> files) {
+        this.files = files;
+    }
+
 
     // Conver to DTO
     public <T extends AssignmentDTO> T baseFill(T dto) {
@@ -168,6 +183,11 @@ public class AssignmentModel {
 
         // Fill in the fields
         dto = baseFill(dto);
+        
+        // Add files
+        dto.files = this.files != null 
+            ? this.files.stream().map(FileModel::toDTO).toList() 
+            : new ArrayList<>();
 
         // Return the dto
         return dto;
