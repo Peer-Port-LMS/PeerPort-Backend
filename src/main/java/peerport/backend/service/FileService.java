@@ -79,6 +79,16 @@ public class FileService {
                 return file;
             }
         } else if (file.getAssignmentSubmission() != null) {
+            // Check if the user is an admin
+            if (userRole == Role.ADMIN) {
+                return file;
+            }
+
+            // Check if the user is an instructor of the course
+            if (userRole == Role.INSTRUCTOR && file.getAssignmentSubmission().getAssignment().getCourse().getInstructors().contains(currentUser)) {
+                return file;
+            }
+
             // Check if the user is allowed to access the assignment submission
             if (file.getAssignmentSubmission().getUser().getUserId().equals(currentUser.getUserId())) {
                 return file;
