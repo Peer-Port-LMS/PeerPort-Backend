@@ -65,65 +65,6 @@ public class ContentService {
     }
 
     /**
-     * Create content
-     * 
-     * @param content The content to create
-     * @param courseId The ID of the course to create the content for
-     * @return The created ContentModel
-     * @throws CourseNotFoundException if course not found (Handled in GlobalExceptionHandler)
-     * @throws UserNotAuthorizedException if user is not authorized to edit (Handled in GlobalExceptionHandler)
-     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
-     */
-    @Transactional
-    public ContentModel createContent(ContentModel content, String courseId) {
-        // Get the course by ID
-        CourseModel course = courseService.getCourseById(courseId);
-
-        // Link the content to the course
-        content.setCourse(course);
-
-        // Save the content
-        ContentModel saved = contentRepository.save(content);
-
-        // Check if the user is allowed to edit the content
-        userAllowedToEditContent(saved);
-
-        // Return the saved content
-        return saved;
-    }
-
-    /**
-     * Create content with files
-     * 
-     * @param content The content to create
-     * @param files The files to associate with the content
-     * @return The created ContentModel
-     * @throws IOException if an error occurs during file operations
-     * @throws UserNotAuthorizedException if user is not authorized to edit (Handled in GlobalExceptionHandler)
-     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
-     */
-    @Transactional
-    public ContentModel createContent(ContentModel content, String courseId, List<MultipartFile> files) throws IOException {
-        // Get the course
-        CourseModel course = courseService.getCourseById(courseId);
-
-        // Set the course to the content
-        content.setCourse(course);
-
-        // Save the content first to get an ID
-        ContentModel saved = contentRepository.save(content);
-
-        // Check if the user is allowed to edit the content
-        userAllowedToEditContent(saved);
-        
-        // Apply file changes
-        applyFileChanges(saved, files, null, null);
-
-        // Return the saved content
-        return contentRepository.save(saved);
-    }
-
-    /**
      * Get all content individual (without parent-child relationships)
      * @return List of ContentModel
      * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
@@ -195,6 +136,65 @@ public class ContentService {
 
         // Return the content
         return contentOpt.get();
+    }
+
+    /**
+     * Create content
+     * 
+     * @param content The content to create
+     * @param courseId The ID of the course to create the content for
+     * @return The created ContentModel
+     * @throws CourseNotFoundException if course not found (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthorizedException if user is not authorized to edit (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
+     */
+    @Transactional
+    public ContentModel createContent(ContentModel content, String courseId) {
+        // Get the course by ID
+        CourseModel course = courseService.getCourseById(courseId);
+
+        // Link the content to the course
+        content.setCourse(course);
+
+        // Save the content
+        ContentModel saved = contentRepository.save(content);
+
+        // Check if the user is allowed to edit the content
+        userAllowedToEditContent(saved);
+
+        // Return the saved content
+        return saved;
+    }
+
+    /**
+     * Create content with files
+     * 
+     * @param content The content to create
+     * @param files The files to associate with the content
+     * @return The created ContentModel
+     * @throws IOException if an error occurs during file operations
+     * @throws UserNotAuthorizedException if user is not authorized to edit (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
+     */
+    @Transactional
+    public ContentModel createContent(ContentModel content, String courseId, List<MultipartFile> files) throws IOException {
+        // Get the course
+        CourseModel course = courseService.getCourseById(courseId);
+
+        // Set the course to the content
+        content.setCourse(course);
+
+        // Save the content first to get an ID
+        ContentModel saved = contentRepository.save(content);
+
+        // Check if the user is allowed to edit the content
+        userAllowedToEditContent(saved);
+        
+        // Apply file changes
+        applyFileChanges(saved, files, null, null);
+
+        // Return the saved content
+        return contentRepository.save(saved);
     }
 
     /**
