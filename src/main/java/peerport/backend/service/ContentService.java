@@ -5,14 +5,18 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.transaction.Transactional;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import peerport.backend.database.ContentRepository;
 import peerport.backend.dto.content.ContentWithChildrenDTO;
+import peerport.backend.exceptions.FailedToParseFormDataException;
 import peerport.backend.exceptions.content.ContentNotFoundException;
 import peerport.backend.exceptions.users.UserNotAuthenticatedException;
 import peerport.backend.exceptions.users.UserNotAuthorizedException;
@@ -38,7 +42,7 @@ public class ContentService {
     private AuthService authService;
 
     @Autowired
-    private jakarta.validation.Validator validator;
+    private Validator validator;
 
     /**
      * Validate content model
@@ -48,19 +52,19 @@ public class ContentService {
      */
     public void validateContent(ContentModel content) {
         if (content == null) {
-            throw new peerport.backend.exceptions.FailedToParseFormDataException("Content data is required.");
+            throw new FailedToParseFormDataException("Content data is required.");
         }
 
-        java.util.Set<jakarta.validation.ConstraintViolation<ContentModel>> violations = validator.validate(content);
+        Set<ConstraintViolation<ContentModel>> violations = validator.validate(content);
         if (!violations.isEmpty()) {
             StringBuilder sb = new StringBuilder();
-            for (jakarta.validation.ConstraintViolation<ContentModel> violation : violations) {
+            for (ConstraintViolation<ContentModel> violation : violations) {
                 sb.append(violation.getPropertyPath().toString())
                     .append(" ")
                     .append(violation.getMessage())
                     .append("; ");
             }
-            throw new peerport.backend.exceptions.FailedToParseFormDataException("Content data validation failed: " + sb.toString());
+            throw new FailedToParseFormDataException("Content data validation failed: " + sb.toString());
         }
     }
 
