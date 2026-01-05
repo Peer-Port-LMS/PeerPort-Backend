@@ -45,11 +45,11 @@ public class AssignmentSubmissionController {
     @GetMapping
     public ResponseEntity<List<AssignmentSubmissionDTO>> getAllAssignmentSubmissions() {
         // Get all the assignment submissions
-        List<AssignmentSubmissionModel> submission = assignmentSubmissionService.getAllAssignmentSubmissions(); 
+        List<AssignmentSubmissionModel> submissions = assignmentSubmissionService.getAllAssignmentSubmissions(); 
 
         // Convert to DTOs
         List<AssignmentSubmissionDTO> submissionDTOs = new ArrayList<>();
-        for (AssignmentSubmissionModel model : submission) {
+        for (AssignmentSubmissionModel model : submissions) {
             submissionDTOs.add(model.toDTO());
         }
 
