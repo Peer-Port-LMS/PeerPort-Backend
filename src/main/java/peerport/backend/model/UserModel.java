@@ -49,7 +49,7 @@ public class UserModel {
 
     // Connections
     @OneToMany(mappedBy="user", cascade=CascadeType.ALL)
-    private List<EnrollmentModel> enrollments;
+    private List<EnrollmentModel> enrollments = new ArrayList<>();
 
     @ManyToMany(mappedBy="instructors")
     private List<CourseModel> instructedCourses = new ArrayList<>();
