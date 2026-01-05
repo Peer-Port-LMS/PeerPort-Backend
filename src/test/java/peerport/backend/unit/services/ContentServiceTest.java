@@ -9,7 +9,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.never;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -52,8 +51,6 @@ import peerport.backend.service.CourseService;
 import peerport.backend.service.FileService;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.mock.web.MockMultipartFile;
-import org.mockito.Mock;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.any;
 import peerport.backend.model.FileModel;
 
