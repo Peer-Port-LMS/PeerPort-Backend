@@ -112,7 +112,7 @@ public class AssignmentSubmissionService {
      * @throws UserNotAuthorizedException If the user is not authorized to view the submission (Handled in GlobalExceptionHandler)
      */
     public AssignmentSubmissionModel getSubmissionById(String assignmentSubmissionId) {
-        // Get the assignment by Id
+        // Get the assignment submission by ID
         Optional<AssignmentSubmissionModel> assignmentSubmissionOpt = assignmentSubmissionRepository.findById(assignmentSubmissionId);
 
         // Check if it exists
@@ -251,7 +251,7 @@ public class AssignmentSubmissionService {
      * @throws UserNotAuthorizedException If the user is not authorized to modify the submission (Handled in GlobalExceptionHandler)
      */
     private void userAllowedToModifySubmission(AssignmentSubmissionModel submission) {
-        // Get the current users role
+        // Get the current user's role
         UserModel currentUser = authService.getCurrentUser();
         Role role = currentUser.getRole();
 
