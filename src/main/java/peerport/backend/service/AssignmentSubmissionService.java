@@ -57,24 +57,45 @@ public class AssignmentSubmissionService {
         Role role = user.getRole();
 
         // If admin return all
-        if (role == Role.ADMIN) return assignmentSubmissionRepository.findAll();
+        if (role == Role.ADMIN) {
+            return assignmentSubmissionRepository.findAll();
+        }
 
-        // If user is an instructor or student return all submissions for their courses
-        // Get the submissions for the instructors courses
+        // Collect submissions based on role
         List<AssignmentSubmissionModel> submissions = new ArrayList<>();
-        user.getTaughtCourses().forEach(course -> 
-            course.getAssignments().forEach(assignment -> {
-                submissions.addAll(assignment.getSubmissions());
-            })
-        );
-        user.getEnrollments().forEach(enrollment -> {
-            enrollment.getCourse().getAssignments().forEach(assignment -> {
-                submissions.addAll(assignment.getSubmissions());
-            });
-        });
+
+        // Instructors: get all submissions for courses they teach
+        if (role == Role.INSTRUCTOR) {
+            user.getTaughtCourses().forEach(course ->
+                course.getAssignments().forEach(assignment -> {
+                    submissions.addAll(assignment.getSubmissions());
+                })
+            );
+        } else {
+            // Students (and other non-admin, non-instructor roles): only their own submissions
+            user.getEnrollments().forEach(enrollment ->
+                enrollment.getCourse().getAssignments().forEach(assignment ->
+                    assignment.getSubmissions().forEach(submission -> {
+                        if (submission.getStudent() != null && submission.getStudent().equals(user)) {
+                            submissions.add(submission);
+                        }
+                    })
+                )
+            );
+        }
+
+        // Deduplicate submissions by ID
+        List<AssignmentSubmissionModel> uniqueSubmissions = new ArrayList<>();
+        java.util.Set<String> seenIds = new java.util.HashSet<>();
+        for (AssignmentSubmissionModel submission : submissions) {
+            String id = submission.getId();
+            if (id == null || seenIds.add(id)) {
+                uniqueSubmissions.add(submission);
+            }
+        }
 
         // Return the submissions
-        return submissions;
+        return uniqueSubmissions;
     }
 
     /**
