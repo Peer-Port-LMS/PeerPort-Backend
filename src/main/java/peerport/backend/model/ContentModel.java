@@ -3,6 +3,9 @@ package peerport.backend.model;
 import java.util.Date;
 import java.util.List;
 
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -13,6 +16,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import peerport.backend.dto.content.ContentDTO;
 import peerport.backend.dto.content.ContentWithAllDetailsDTO;
 import peerport.backend.dto.content.ContentWithChildrenDTO;
@@ -31,15 +36,21 @@ public class ContentModel {
     @GeneratedValue(strategy=GenerationType.UUID)
     private String contentId;
 
+    @NotBlank
+    @NotNull
     private String title;
 
+    @NotBlank
     private String description;
 
-    private Boolean visible;
+    @NotNull
+    private Boolean visible = true;
 
+    @CreationTimestamp
     @Column(name="\"dateCreated\"")
     private Date dateCreated;
 
+    @UpdateTimestamp
     @Column(name="\"dateUpdated\"")
     private Date dateUpdated;
 
