@@ -42,43 +42,6 @@ public class CourseService {
     private long fileUploadSizeLimit;
 
 
-    // Create Course
-    /**
-     * Creates a new course.
-     * 
-     * @param course - The course model to create
-     * @return The created CourseModel
-     * @param image - The image file to upload for the course
-     * @throws IOException If there was an error saving the file
-     * @throws FileSizeLimitExceededException If the file size exceeds the limit (Handled in GlobalExceptionHandler)
-     * @throws UserNotAuthenticatedException If the user is not authenticated (Handled in GlobalExceptionHandler)
-     */
-    @Transactional
-    public CourseModel createCourse(CourseModel course, MultipartFile image) throws IOException {
-        // Validate the image
-        if (image != null && image.getSize() > fileUploadSizeLimit) { // 5MB limit
-            throw new FileSizeLimitExceededException("File size exceeds the limit of " + fileUploadSizeLimit + " bytes.");
-        }
-
-        // Get the current user
-        UserModel currentUser = authService.getCurrentUser();
-
-        // Add the current user as an instructor. Only instructors and admins can create courses,
-        // so we can safely assume they should be added as instructors.
-        course.addInstructor(currentUser);
-
-        // Save the course first to generate an ID
-        course = courseRepository.save(course);
-
-        // Save the course image if it exists
-        if (image != null) {
-            course.setImage(fileService.saveCourseImage(image, course.getCourseId()));
-            courseRepository.save(course);
-        }
-
-        return course;
-    }
-
     /**
      * Gets all courses the current user is enrolled in.
      * If the user is an admin, gets all courses.
@@ -142,6 +105,42 @@ public class CourseService {
         return courseOpt.get();
     }
 
+    // Create Course
+    /**
+     * Creates a new course.
+     * 
+     * @param course - The course model to create
+     * @return The created CourseModel
+     * @param image - The image file to upload for the course
+     * @throws IOException If there was an error saving the file
+     * @throws FileSizeLimitExceededException If the file size exceeds the limit (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthenticatedException If the user is not authenticated (Handled in GlobalExceptionHandler)
+     */
+    @Transactional
+    public CourseModel createCourse(CourseModel course, MultipartFile image) throws IOException {
+        // Validate the image
+        if (image != null && image.getSize() > fileUploadSizeLimit) { // 5MB limit
+            throw new FileSizeLimitExceededException("File size exceeds the limit of " + fileUploadSizeLimit + " bytes.");
+        }
+
+        // Get the current user
+        UserModel currentUser = authService.getCurrentUser();
+
+        // Add the current user as an instructor. Only instructors and admins can create courses,
+        // so we can safely assume they should be added as instructors.
+        course.addInstructor(currentUser);
+
+        // Save the course first to generate an ID
+        course = courseRepository.save(course);
+
+        // Save the course image if it exists
+        if (image != null) {
+            course.setImage(fileService.saveCourseImage(image, course.getCourseId()));
+            courseRepository.save(course);
+        }
+
+        return course;
+    }
 
     /**
      * Updates a course with the given fields.
