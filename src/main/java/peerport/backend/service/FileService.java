@@ -338,9 +338,11 @@ public class FileService {
             String savedFilePath = saveFile(
                 file,
                 this.uploadDir + "/" 
-                + this.coursesDir + "/" 
-                + assignment.getCourse().getCourseId() + "/assignments/" 
-                + assignment.getAssignmentId() + "/submissions/" + fileName
+                    + this.coursesDir + "/" 
+                    + assignment.getCourse().getCourseId() + "/assignments/" 
+                    + assignment.getAssignmentId() + "/submissions/"
+                    + assignmentSubmission.getAssignmentSubmissionId() + "/" 
+                    + fileName
             );
             
             // Make a new file model
