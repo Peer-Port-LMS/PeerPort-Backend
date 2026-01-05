@@ -25,7 +25,6 @@ import org.springframework.web.multipart.MultipartFile;
 import peerport.backend.database.CoursesRepository;
 import peerport.backend.exceptions.courses.CourseNotFoundException;
 import peerport.backend.exceptions.files.FileSizeLimitExceededException;
-import peerport.backend.exceptions.users.UserNotAuthenticatedException;
 import peerport.backend.exceptions.users.UserNotAuthorizedException;
 import peerport.backend.model.*;
 import peerport.backend.model.RoleModel.Role;
@@ -35,10 +34,17 @@ import peerport.backend.service.*;
 @DisplayName("CourseService Unit Tests")
 public class CourseServiceTest {
     
-    @InjectMocks private CourseService courseService;
-    @Mock private CoursesRepository coursesRepository;
-    @Mock private AuthService authService;
-    @Mock private FileService fileService;
+    @InjectMocks
+    private CourseService courseService;
+    
+    @Mock 
+    private CoursesRepository coursesRepository;
+    
+    @Mock 
+    private AuthService authService;
+    
+    @Mock 
+    private FileService fileService;
 
     private static UserModel adminUser, instructorUser, studentUser;
 
