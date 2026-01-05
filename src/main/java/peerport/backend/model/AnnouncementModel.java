@@ -18,7 +18,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
-import peerport.backend.dto.AnnouncementDTO;
+import peerport.backend.dto.announcements.AnnouncementDTO;
 
 @Entity
 @Table(name="\"Announcements\"")

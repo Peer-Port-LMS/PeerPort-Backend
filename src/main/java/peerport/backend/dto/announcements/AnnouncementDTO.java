@@ -1,4 +1,4 @@
-package peerport.backend.dto;
+package peerport.backend.dto.announcements;
 
 import java.util.Date;
 

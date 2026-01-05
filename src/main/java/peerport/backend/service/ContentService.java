@@ -12,7 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.transaction.Transactional;
 import peerport.backend.database.ContentRepository;
-import peerport.backend.dto.ContentWithChildrenDTO;
+import peerport.backend.dto.content.ContentWithChildrenDTO;
 import peerport.backend.exceptions.content.ContentNotFoundException;
 import peerport.backend.exceptions.users.UserNotAuthenticatedException;
 import peerport.backend.exceptions.users.UserNotAuthorizedException;

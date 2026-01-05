@@ -20,9 +20,9 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import peerport.backend.dto.ContentDTO;
-import peerport.backend.dto.ContentWithAllDetailsDTO;
-import peerport.backend.dto.ContentWithChildrenDTO;
+import peerport.backend.dto.content.ContentDTO;
+import peerport.backend.dto.content.ContentWithAllDetailsDTO;
+import peerport.backend.dto.content.ContentWithChildrenDTO;
 import peerport.backend.exceptions.FailedToParseFormDataException;
 import peerport.backend.model.ContentModel;
 import peerport.backend.service.ContentService;

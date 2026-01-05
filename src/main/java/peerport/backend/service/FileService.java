@@ -20,6 +20,7 @@ import peerport.backend.model.ContentModel;
 import peerport.backend.exceptions.files.InvalidFileTypeException;
 import peerport.backend.model.AnnouncementModel;
 import peerport.backend.model.AssignmentModel;
+import peerport.backend.model.AssignmentSubmissionModel;
 import peerport.backend.model.FileModel;
 import peerport.backend.model.UserModel;
 import peerport.backend.model.RoleModel.Role;
@@ -75,6 +76,16 @@ public class FileService {
         } else if (file.getAnnouncement() != null) {
             // Check if the user is allowed to access the announcement
             if (file.getAnnouncement().getCourse().getUsers().contains(currentUser)) {
+                return file;
+            }
+        } else if (file.getAssignmentSubmission() != null) {
+            // Check if the user is an instructor of the course
+            if (userRole == Role.INSTRUCTOR && file.getAssignmentSubmission().getAssignment().getCourse().getInstructors().contains(currentUser)) {
+                return file;
+            }
+
+            // Check if the user is allowed to access the assignment submission
+            if (file.getAssignmentSubmission().getUser().getUserId().equals(currentUser.getUserId())) {
                 return file;
             }
         }
@@ -276,6 +287,72 @@ public class FileService {
             fileCounter++;
         }
         
+        return savedFiles;
+    }
+
+    /**
+     * Saves files attached to an assignment submission
+     * 
+     * @param files - The list of files to save
+     * @param assignment - The assignment the submission belongs to
+     * @param assignmentSubmission - The assignment submission the files belong to
+     * @return The list of saved FileModels
+     * @throws IOException If there was an error saving the files
+     */
+    @Transactional
+    public List<FileModel> saveAssignmentSubmissionFiles(
+        List<MultipartFile> files, 
+        AssignmentModel assignment,
+        AssignmentSubmissionModel assignmentSubmission
+    ) throws IOException {
+        List<FileModel> savedFiles = new ArrayList<>();
+        
+        long baseTimestamp = System.currentTimeMillis();
+        int fileCounter = 0;
+        
+        for (MultipartFile file : files) {
+            if (file == null || file.isEmpty()) {
+                continue;
+            }
+            
+            // Get the file extension
+            String fileExtension = getFileExtension(file.getOriginalFilename());
+            String fileName = String.format("%d_%d%s",
+                baseTimestamp,
+                fileCounter,
+                fileExtension.isEmpty() ? "" : "." + fileExtension
+            );
+            
+            // Get the content type
+            String contentType = file.getContentType();
+            if (contentType == null) {
+                contentType = "application/octet-stream";
+            }
+            
+            // Save the file
+            String savedFilePath = saveFile(
+                file,
+                this.uploadDir + "/" 
+                    + this.coursesDir + "/" 
+                    + assignment.getCourse().getCourseId() + "/assignments/" 
+                    + assignment.getAssignmentId() + "/submissions/"
+                    + assignmentSubmission.getAssignmentSubmissionId() + "/" 
+                    + fileName
+            );
+            
+            // Make a new file model
+            FileModel newFile = new FileModel(fileName, savedFilePath, fileExtension, contentType);
+            newFile.setAssignmentSubmission(assignmentSubmission);
+            
+            // Save the file model to the database
+            FileModel savedFile = filesRepository.save(newFile);
+            savedFiles.add(savedFile);
+            
+            // Increment counter
+            fileCounter++;
+        }
+        
+        // Return the saved files
         return savedFiles;
     }
 

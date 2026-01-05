@@ -1,7 +1,9 @@
-package peerport.backend.dto;
+package peerport.backend.dto.assignments;
 
 import java.util.Date;
 import java.util.List;
+
+import peerport.backend.dto.FileDTO;
 
 public class AssignmentDTO {
     public String assignmentId;

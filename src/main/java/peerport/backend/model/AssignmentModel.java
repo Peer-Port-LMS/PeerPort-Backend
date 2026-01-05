@@ -20,8 +20,8 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import peerport.backend.dto.AssignmentDTO;
-import peerport.backend.dto.AssignmentWithCourseDTO;
+import peerport.backend.dto.assignments.AssignmentDTO;
+import peerport.backend.dto.assignments.AssignmentWithCourseDTO;
 
 @Entity
 @Table(name="\"Assignments\"")
@@ -60,6 +60,9 @@ public class AssignmentModel {
 
     @OneToMany(mappedBy="assignment", cascade=CascadeType.ALL, orphanRemoval=true)
     private List<FileModel> files = new ArrayList<>();
+
+    @OneToMany(mappedBy="assignment", cascade=CascadeType.ALL, orphanRemoval=true)
+    private List<AssignmentSubmissionModel> submissions = new ArrayList<>();
 
 
     // Default constructor
@@ -158,6 +161,14 @@ public class AssignmentModel {
 
     public void setFiles(List<FileModel> files) {
         this.files = files;
+    }
+
+    public List<AssignmentSubmissionModel> getSubmissions() {
+        return submissions;
+    }
+
+    public void setSubmissions(List<AssignmentSubmissionModel> submissions) {
+        this.submissions = submissions;
     }
 
 

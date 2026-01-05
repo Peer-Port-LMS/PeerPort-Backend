@@ -1,4 +1,4 @@
-package peerport.backend.dto;
+package peerport.backend.dto.courses;
 
 public class CourseDTO {
     public String courseId;
