@@ -101,7 +101,7 @@ public class ContentService {
      */
     public List<ContentWithChildrenDTO> getStructuredContent() {
         // Get the content from the repository
-        List<ContentModel> contentList = contentRepository.findAll();
+        List<ContentModel> contentList = getAllContent();
 
         // Convert to ContentWithChildrenDTO
         List<ContentWithChildrenDTO> dtoList = new ArrayList<>();
@@ -137,9 +137,14 @@ public class ContentService {
         if (contentOpt.isEmpty()) {
             throw new ContentNotFoundException(contentId);
         }
+        
+        ContentModel content = contentOpt.get();
 
+        // Check if the user is allowed to access the content
+        userAllowedToAccessContent(content);
+        
         // Return the content
-        return contentOpt.get();
+        return content;
     }
 
     /**
@@ -447,5 +452,10 @@ public class ContentService {
 
         // Check if the user is allowed to edit the content
         userAllowedToEditContent(content);
+    }
+
+    private void userAllowedToAccessContent(ContentModel content) {
+        // Check if the user is allowed to access the course
+        courseService.userAllowedToAccessCourse(content.getCourse());
     }
 }
