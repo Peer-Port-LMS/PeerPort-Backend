@@ -92,7 +92,7 @@ public class AssignmentSubmissionService {
         for (AssignmentSubmissionModel submission : submissions) {
             // Get the assignment submission by Id
             String id = submission.getAssignmentSubmissionId();
-            if (id == null || seenIds.add(id)) {
+            if (seenIds.add(id)) {
                 uniqueSubmissions.add(submission);
             }
         }
