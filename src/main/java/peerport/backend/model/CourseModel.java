@@ -193,6 +193,10 @@ public class CourseModel {
         return assignments;
     }
 
+    public void addContent(ContentModel contentItem) {
+        this.content.add(contentItem);
+    }
+
     public List<ContentModel> getContent() {
         return content;
     }
