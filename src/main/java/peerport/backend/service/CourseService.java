@@ -92,17 +92,29 @@ public class CourseService {
 
     /** 
      * Gets a course by its ID.
+     * Users must be authorized to access the course based on their role:
+     * - ADMIN: Can access any course
+     * - INSTRUCTOR: Can access courses they teach or are enrolled in
+     * - STUDENT: Can only access courses they are enrolled in
      * 
      * @param courseId - The ID of the course to get
-     * @return An Optional containing the CourseModel if found, or empty if not found
+     * @return The CourseModel if found and user is authorized
      * @throws CourseNotFoundException If the course is not found (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthenticatedException If the user is not authenticated (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthorizedException If the user is not authorized to access the course (Handled in GlobalExceptionHandler)
      */
     public CourseModel getCourseById(String courseId) {
         Optional<CourseModel> courseOpt = courseRepository.findById(courseId);
         if (courseOpt.isEmpty()) {
             throw new CourseNotFoundException(courseId);
         }
-        return courseOpt.get();
+        
+        CourseModel course = courseOpt.get();
+        
+        // Check if the user is allowed to access the course
+        userAllowedToAccessCourse(course);
+        
+        return course;
     }
 
     // Create Course
@@ -356,6 +368,47 @@ public class CourseService {
 
         // Check if user is allowed to edit the course
         userAllowedToEditCourse(course);
+    }
+
+    /**
+     * Checks if the current user is allowed to access the given course.
+     * ADMIN users can access any course.
+     * INSTRUCTOR users can access courses they teach or are enrolled in.
+     * STUDENT users can only access courses they are enrolled in.
+     * 
+     * @param course The course to check permissions for
+     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthorizedException if user is not authorized to access the course (Handled in GlobalExceptionHandler)
+     */
+    public void userAllowedToAccessCourse(CourseModel course) {
+        // Get the current user
+        UserModel currentUser = authService.getCurrentUser();
+        Role role = currentUser.getRole();
+
+        // Check if user is admin
+        if (role == Role.ADMIN) return;
+
+        // Check if user is an instructor for the course
+        if (role == Role.INSTRUCTOR) {
+            // Check if user is teaching this course
+            if (course.getInstructors().contains(currentUser)) return;
+
+            // Check if user is enrolled in this course
+            List<EnrollmentModel> enrollments = currentUser.getEnrollments();
+            for (EnrollmentModel enrollment : enrollments) {
+                if (enrollment.getCourse().equals(course)) return;
+            }
+        }
+
+        // For students or users not matching the above conditions
+        // Check if user is enrolled in the course
+        List<EnrollmentModel> enrollments = currentUser.getEnrollments();
+        for (EnrollmentModel enrollment : enrollments) {
+            if (enrollment.getCourse().equals(course)) return;
+        }
+
+        // User is not allowed to access the course
+        throw new UserNotAuthorizedException("User is not authorized to access course with ID: " + course.getCourseId());
     }
 
 }
