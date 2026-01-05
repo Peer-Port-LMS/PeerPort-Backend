@@ -66,7 +66,7 @@ public class CourseModel {
 
     // Connections
     @OneToMany(mappedBy="course", cascade=CascadeType.ALL)
-    private List<EnrollmentModel> enrollments;
+    private List<EnrollmentModel> enrollments = new ArrayList<>();
 
     @ManyToMany
     @JoinTable(
@@ -80,7 +80,7 @@ public class CourseModel {
     private List<AnnouncementModel> announcements = new ArrayList<>();
 
     @OneToMany(mappedBy="course", cascade=CascadeType.ALL)
-    private List<AssignmentModel> assignments = new ArrayList<AssignmentModel>();
+    private List<AssignmentModel> assignments = new ArrayList<>();
 
     @OneToMany(mappedBy="course", cascade=CascadeType.ALL)
     private List<ContentModel> content = new ArrayList<>();
