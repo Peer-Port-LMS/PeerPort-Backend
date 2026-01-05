@@ -76,7 +76,7 @@ public class AssignmentSubmissionService {
             user.getEnrollments().forEach(enrollment ->
                 enrollment.getCourse().getAssignments().forEach(assignment ->
                     assignment.getSubmissions().forEach(submission -> {
-                        if (submission.getStudent() != null && submission.getStudent().equals(user)) {
+                        if (submission.getUser() != null && submission.getUser().equals(user)) {
                             submissions.add(submission);
                         }
                     })
@@ -88,7 +88,8 @@ public class AssignmentSubmissionService {
         List<AssignmentSubmissionModel> uniqueSubmissions = new ArrayList<>();
         java.util.Set<String> seenIds = new java.util.HashSet<>();
         for (AssignmentSubmissionModel submission : submissions) {
-            String id = submission.getId();
+            // Get the assignment submission by Id
+            String id = submission.getAssignmentSubmissionId();
             if (id == null || seenIds.add(id)) {
                 uniqueSubmissions.add(submission);
             }
