@@ -179,6 +179,23 @@ public class CourseServiceTest {
         }
 
         @Test
+        @DisplayName("Instructor creates course")
+        void testCreateCourse_ByInstructor() throws IOException {
+            // Arrange
+            CourseModel course = new CourseModel(null, "Test", "CS101", null, null, null, null);
+            CourseModel saved = new CourseModel("course-1", "Test", "CS101", null, null, null, null);
+            when(authService.getCurrentUser()).thenReturn(instructorUser);
+            when(coursesRepository.save(any(CourseModel.class))).thenReturn(saved);
+
+            // Act
+            CourseModel result = courseService.createCourse(course, null);
+
+            // Assert
+            assertEquals("course-1", result.getCourseId());
+            verify(coursesRepository, times(1)).save(any(CourseModel.class));
+        }
+
+        @Test
         @DisplayName("Create course with image")
         void testCreateCourse_WithImage() throws IOException {
             // Arrange
@@ -227,6 +244,25 @@ public class CourseServiceTest {
             // Act & Assert
             assertThrows(IOException.class, () -> courseService.createCourse(course, image));
         }
+
+        @Test
+        @DisplayName("Create course with all fields")
+        void testCreateCourse_AllFields() throws IOException {
+            // Arrange
+            java.util.Date start = new java.util.Date();
+            java.util.Date end = new java.util.Date();
+            CourseModel course = new CourseModel(null, "Test", "CS101", true, "Description", start, end);
+            CourseModel saved = new CourseModel("course-1", "Test", "CS101", true, "Description", start, end);
+            when(authService.getCurrentUser()).thenReturn(adminUser);
+            when(coursesRepository.save(any(CourseModel.class))).thenReturn(saved);
+
+            // Act
+            CourseModel result = courseService.createCourse(course, null);
+
+            // Assert
+            assertEquals("course-1", result.getCourseId());
+            assertEquals("Description", result.getDescription());
+        }
     }
 
     @Nested
@@ -250,6 +286,34 @@ public class CourseServiceTest {
             assertEquals("New", result.getName());
             assertEquals("CS102", result.getCourseCode());
             verify(coursesRepository).save(existing);
+        }
+
+        @Test
+        @DisplayName("Update course with all fields")
+        void testUpdateCourse_AllFields() {
+            // Arrange
+            CourseModel existing = createCourse("course-1", "Old", "CS101");
+            existing.setDescription("Old desc");
+            existing.setIsOpen(false);
+            java.util.Date newStart = new java.util.Date();
+            java.util.Date newEnd = new java.util.Date();
+            CourseModel updated = new CourseModel(null, "New", "CS102", true, "New desc", newStart, newEnd);
+            updated.setIsOpen(true);
+            
+            when(authService.getCurrentUser()).thenReturn(adminUser);
+            when(coursesRepository.findById("course-1")).thenReturn(Optional.of(existing));
+            when(coursesRepository.save(any())).thenReturn(existing);
+
+            // Act
+            CourseModel result = courseService.updateCourse("course-1", updated);
+
+            // Assert
+            assertEquals("New", result.getName());
+            assertEquals("CS102", result.getCourseCode());
+            assertEquals("New desc", result.getDescription());
+            assertTrue(result.getIsOpen());
+            assertNotNull(result.getStartDate());
+            assertNotNull(result.getEndDate());
         }
 
         @Test
@@ -328,6 +392,22 @@ public class CourseServiceTest {
             // Act & Assert
             assertThrows(FileSizeLimitExceededException.class, () -> courseService.updateCourse("course-1", new CourseModel(), largeImage));
         }
+
+        @Test
+        @DisplayName("IOException propagates in update")
+        void testUpdateCourse_IOException() throws IOException {
+            // Arrange
+            CourseModel existing = createCourse("course-1", "Old", "CS101");
+            CourseModel updated = new CourseModel(null, "New", "CS102", null, null, null, null);
+            MockMultipartFile image = new MockMultipartFile("image", "test.jpg", "image/jpeg", new byte[1024]);
+            
+            when(authService.getCurrentUser()).thenReturn(adminUser);
+            when(coursesRepository.findById("course-1")).thenReturn(Optional.of(existing));
+            when(fileService.saveCourseImage(any(), eq("course-1"))).thenThrow(new IOException("Fail"));
+
+            // Act & Assert
+            assertThrows(IOException.class, () -> courseService.updateCourse("course-1", updated, image));
+        }
     }
 
     @Nested
@@ -353,6 +433,74 @@ public class CourseServiceTest {
             assertEquals("New", result.getName());
             assertEquals("Old desc", result.getDescription());
             assertEquals("CS101", result.getCourseCode());
+        }
+
+        @Test
+        @DisplayName("Patch updates multiple fields")
+        void testPatchCourse_MultipleFields() {
+            // Arrange
+            CourseModel existing = createCourse("course-1", "Old", "CS101");
+            existing.setDescription("Old desc");
+            existing.setIsOpen(false);
+            CourseModel patch = new CourseModel();
+            patch.setName("New");
+            patch.setCourseCode("CS102");
+            patch.setIsOpen(true);
+            patch.setDescription("New desc");
+            
+            when(authService.getCurrentUser()).thenReturn(adminUser);
+            when(coursesRepository.findById("course-1")).thenReturn(Optional.of(existing));
+            when(coursesRepository.save(any())).thenReturn(existing);
+
+            // Act
+            CourseModel result = courseService.patchCourse("course-1", patch);
+
+            // Assert
+            assertEquals("New", result.getName());
+            assertEquals("CS102", result.getCourseCode());
+            assertEquals("New desc", result.getDescription());
+            assertTrue(result.getIsOpen());
+        }
+
+        @Test
+        @DisplayName("Patch course by CourseModel directly")
+        void testPatchCourse_ByModel() {
+            // Arrange
+            CourseModel existing = createCourse("course-1", "Old", "CS101");
+            existing.setDescription("Old desc");
+            CourseModel patch = new CourseModel();
+            patch.setName("New");
+            
+            when(authService.getCurrentUser()).thenReturn(adminUser);
+            when(coursesRepository.save(any())).thenReturn(existing);
+
+            // Act
+            CourseModel result = courseService.patchCourse(existing, patch);
+
+            // Assert
+            assertEquals("New", result.getName());
+            assertEquals("Old desc", result.getDescription());
+        }
+
+        @Test
+        @DisplayName("Instructor patches own course")
+        void testPatchCourse_InstructorOwn() {
+            // Arrange
+            CourseModel existing = createCourse("course-1", "Old", "CS101");
+            existing.addInstructor(instructorUser);
+            CourseModel patch = new CourseModel();
+            patch.setName("New");
+            
+            when(authService.getCurrentUser()).thenReturn(instructorUser);
+            when(coursesRepository.findById("course-1")).thenReturn(Optional.of(existing));
+            when(coursesRepository.save(any())).thenReturn(existing);
+
+            // Act
+            CourseModel result = courseService.patchCourse("course-1", patch);
+
+            // Assert
+            assertEquals("New", result.getName());
+            verify(coursesRepository).save(existing);
         }
 
         @Test
@@ -401,6 +549,29 @@ public class CourseServiceTest {
         }
 
         @Test
+        @DisplayName("Patch with dates")
+        void testPatchCourse_WithDates() {
+            // Arrange
+            CourseModel existing = createCourse("course-1", "Old", "CS101");
+            CourseModel patch = new CourseModel();
+            patch.setName("New");
+            patch.setStartDate(new java.util.Date());
+            patch.setEndDate(new java.util.Date());
+            
+            when(authService.getCurrentUser()).thenReturn(adminUser);
+            when(coursesRepository.findById("course-1")).thenReturn(Optional.of(existing));
+            when(coursesRepository.save(any())).thenReturn(existing);
+
+            // Act
+            CourseModel result = courseService.patchCourse("course-1", patch);
+
+            // Assert
+            assertNotNull(result.getStartDate());
+            assertNotNull(result.getEndDate());
+            verify(coursesRepository).save(existing);
+        }
+
+        @Test
         @DisplayName("Image too large throws exception")
         void testPatchCourse_ImageTooLarge() {
             // Arrange
@@ -408,6 +579,23 @@ public class CourseServiceTest {
 
             // Act & Assert
             assertThrows(FileSizeLimitExceededException.class, () -> courseService.patchCourse("course-1", new CourseModel(), largeImage));
+        }
+
+        @Test
+        @DisplayName("IOException propagates in patch")
+        void testPatchCourse_IOException() throws IOException {
+            // Arrange
+            CourseModel existing = createCourse("course-1", "Old", "CS101");
+            CourseModel patch = new CourseModel();
+            patch.setName("New");
+            MockMultipartFile image = new MockMultipartFile("image", "test.jpg", "image/jpeg", new byte[1024]);
+            
+            when(authService.getCurrentUser()).thenReturn(adminUser);
+            when(coursesRepository.findById("course-1")).thenReturn(Optional.of(existing));
+            when(fileService.saveCourseImage(any(), eq("course-1"))).thenThrow(new IOException("Fail"));
+
+            // Act & Assert
+            assertThrows(IOException.class, () -> courseService.patchCourse("course-1", patch, image));
         }
     }
 
