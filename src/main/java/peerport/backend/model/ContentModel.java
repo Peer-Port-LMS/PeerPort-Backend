@@ -1,5 +1,6 @@
 package peerport.backend.model;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -64,10 +65,10 @@ public class ContentModel {
     private ContentModel parentContent;
 
     @OneToMany(mappedBy="parentContent")
-    private List<ContentModel> subContent;
+    private List<ContentModel> subContent = new ArrayList<>();
 
     @OneToMany(mappedBy="content", cascade=CascadeType.ALL, orphanRemoval=true)
-    private List<FileModel> files;
+    private List<FileModel> files = new ArrayList<>();
 
 
     // Default constructor
@@ -223,9 +224,9 @@ public class ContentModel {
         }
 
         // Set the subContent field
-        dto.subContent = this.subContent.stream()
+        dto.subContent = this.subContent != null ? this.subContent.stream()
             .map(ContentModel::toContentWithChildrenDTO)
-            .toList();
+            .toList() : List.of();
 
         // Return the filled DTO
         return dto;
@@ -239,9 +240,9 @@ public class ContentModel {
         dto.course = this.course.toDTO();
 
         // Set the subContent field
-        dto.subContent = this.subContent.stream()
+        dto.subContent = this.subContent != null ? this.subContent.stream()
             .map(ContentModel::toDTO)
-            .toList();
+            .toList() : List.of();
 
         // Return the filled DTO
         return dto;
