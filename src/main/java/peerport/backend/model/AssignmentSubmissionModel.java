@@ -32,6 +32,9 @@ public class AssignmentSubmissionModel {
     @Column(name="\"dateSubmitted\"")
     private Date dateSubmitted;
 
+    @Column(name="\"comment\"", columnDefinition="TEXT")
+    private String comment;
+
 
     // Connections
     @ManyToOne
@@ -53,12 +56,14 @@ public class AssignmentSubmissionModel {
     public AssignmentSubmissionModel(
         String assignmentSubmissionId, 
         Date dateSubmitted, 
+        String comment,
         UserModel user,
         AssignmentModel assignment, 
         List<FileModel> submittedFiles
     ) {
         this.assignmentSubmissionId = assignmentSubmissionId;
         this.dateSubmitted = dateSubmitted;
+        this.comment = comment;
         this.user = user;
         this.assignment = assignment;
         this.submittedFiles = submittedFiles;
@@ -76,6 +81,14 @@ public class AssignmentSubmissionModel {
 
     public void setDateSubmitted(Date dateSubmitted) {
         this.dateSubmitted = dateSubmitted;
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
     }
 
     public UserModel getUser() {
@@ -108,6 +121,7 @@ public class AssignmentSubmissionModel {
         // Fill in the fields
         dto.assignmentSubmissionId = this.assignmentSubmissionId;
         dto.dateSubmitted = this.dateSubmitted;
+        dto.comment = this.comment;
 
         // Return the dto
         return dto;
