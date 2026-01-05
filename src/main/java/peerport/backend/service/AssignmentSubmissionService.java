@@ -2,8 +2,10 @@ package peerport.backend.service;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -86,7 +88,7 @@ public class AssignmentSubmissionService {
 
         // Deduplicate submissions by ID
         List<AssignmentSubmissionModel> uniqueSubmissions = new ArrayList<>();
-        java.util.Set<String> seenIds = new java.util.HashSet<>();
+        Set<String> seenIds = new HashSet<>();
         for (AssignmentSubmissionModel submission : submissions) {
             // Get the assignment submission by Id
             String id = submission.getAssignmentSubmissionId();
