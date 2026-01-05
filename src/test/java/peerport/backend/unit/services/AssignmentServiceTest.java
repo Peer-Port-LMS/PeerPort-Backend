@@ -62,6 +62,7 @@ public class AssignmentServiceTest {
 
     private static UserModel adminUser, instructorUser, studentUser;
     private static final long FILE_SIZE_LIMIT = 5242880L; // 5MB
+    private static final int MAX_DESCRIPTION_LENGTH = 2000; // Max length for assignment description
 
     @BeforeAll
     static void initAll() {
@@ -72,8 +73,6 @@ public class AssignmentServiceTest {
 
     @BeforeEach
     void setUp() {
-        initAll();
-        
         // Initialize validator
         ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
         validator = factory.getValidator();
@@ -141,7 +140,7 @@ public class AssignmentServiceTest {
             AssignmentModel assignment = new AssignmentModel();
             assignment.setName("Valid Name");
             assignment.setDueDate(new Date());
-            assignment.setDescription("a".repeat(2001)); // Exceeds 2000 character limit
+            assignment.setDescription("a".repeat(MAX_DESCRIPTION_LENGTH + 1)); // Exceeds max character limit
             
             // Act & Assert
             assertThrows(FailedToParseFormDataException.class, () -> 
