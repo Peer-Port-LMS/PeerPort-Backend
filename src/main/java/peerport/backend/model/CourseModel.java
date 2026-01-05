@@ -94,6 +94,7 @@ public class CourseModel {
 
     // Parameterized constructor
     public CourseModel(
+        String id,
         String name, 
         String courseCode,
         Boolean isOpen,
@@ -101,6 +102,7 @@ public class CourseModel {
         Date startDate,
         Date endDate
     ) {
+        this.courseId = id;
         this.name = name;
         this.courseCode = courseCode;
         this.isOpen = isOpen;
