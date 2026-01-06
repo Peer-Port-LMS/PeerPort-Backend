@@ -93,8 +93,12 @@ public class AnnouncementService {
             throw new AnnouncementNotFoundException(announcementId);
         }
 
+        AnnouncementModel announcementModel = announcement.get();
+
+        userAllowedToAccessAnnouncement(announcementModel);
+
         // Return the announcement
-        return announcement.get();
+        return announcementModel;
     }
 
     /**
@@ -402,6 +406,11 @@ public class AnnouncementService {
 
         // Check if user is allowed to edit
         userAllowedToEditAnnouncement(announcement);
+    }
+
+
+    private void userAllowedToAccessAnnouncement(AnnouncementModel announcement) {
+        courseService.userAllowedToAccessCourse(announcement.getCourse());
     }
 
 
