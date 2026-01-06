@@ -109,8 +109,12 @@ public class AssignmentService {
             throw new AssignmentNotFoundException(assignmentId);
         }
 
+        AssignmentModel assignmentModel = assignment.get();
+
+        userAllowedToAccessAssignment(assignmentModel);
+
         // Return the assignment
-        return assignment.get();
+        return assignmentModel;
     }
 
     /**
@@ -348,22 +352,8 @@ public class AssignmentService {
         // Apply file changes first
         applyFileChanges(assignment, files, removeFileIds, replaceAll);
         
-        // If assignment exists, update only the provided fields
-        if (updatedFields.getName() != null) {
-            assignment.setName(updatedFields.getName());
-        }
-        if (updatedFields.getDescription() != null) {
-            assignment.setDescription(updatedFields.getDescription());
-        }
-        if (updatedFields.getVisible() != null) {
-            assignment.setVisible(updatedFields.getVisible());
-        }
-        if (updatedFields.getDueDate() != null) {
-            assignment.setDueDate(updatedFields.getDueDate());
-        }
-        
         // Save and return the updated assignment
-        return assignmentRepository.save(assignment);
+        return patchAssignment(assignmentId, updatedFields);
     }
 
     /**
@@ -411,6 +401,11 @@ public class AssignmentService {
 
         // Check if user is allowed to edit the assignment
         userAllowedToEditAssignment(assignment);
+    }
+
+    private void userAllowedToAccessAssignment(AssignmentModel assingment) {
+        // Check if user is allowed to access the assignment
+        courseService.userAllowedToAccessCourse(assingment.getCourse());
     }
 
     /**
