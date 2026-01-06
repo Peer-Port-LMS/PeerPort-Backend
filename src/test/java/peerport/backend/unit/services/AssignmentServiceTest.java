@@ -11,9 +11,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +26,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -107,13 +112,13 @@ public class AssignmentServiceTest {
         
         @Test
         @DisplayName("Should pass validation for valid assignment")
-        void testValidateAssignmentValid() {
+        void testValidateAssignment_Valid() {
             assertDoesNotThrow(() -> assignmentService.validateAssignment(validAssignment));
         }
         
         @Test
         @DisplayName("Should throw FailedToParseFormDataException when validation fails")
-        void testValidateAssignmentInvalid() {
+        void testValidateAssignment_Invalid() {
             validAssignment.setName(" ");
             assertThrows(FailedToParseFormDataException.class, 
                 () -> assignmentService.validateAssignment(validAssignment));
@@ -121,7 +126,7 @@ public class AssignmentServiceTest {
         
         @Test
         @DisplayName("Should include all violation messages in exception")
-        void testValidateAssignmentMultipleViolations() {
+        void testValidateAssignment_MultipleViolations() {
             validAssignment.setName(null);
             validAssignment.setDueDate(null);
             FailedToParseFormDataException exception = assertThrows(
@@ -138,8 +143,8 @@ public class AssignmentServiceTest {
     @DisplayName("getAllAssignments Tests")
     class GetAllAssignmentsTests {
         @Test
-        @DisplayName("Admin should receive all assignments from repository")
-        void adminGetsAllAssignments() {
+        @DisplayName("Admin should get all assignments")
+        void testGetAllAssignments_AdminGetsAllAssignments() {
             List<AssignmentModel> assignments = List.of(new AssignmentModel(), new AssignmentModel());
             when(authService.getCurrentUser()).thenReturn(adminUser);
             when(assignmentRepository.findAll()).thenReturn(assignments);
@@ -150,33 +155,45 @@ public class AssignmentServiceTest {
             verify(courseService, never()).getAllCourses();
         }
 
-        @Test
-        @DisplayName("Non-admin aggregates assignments from enrolled courses")
-        void nonAdminGetsAssignmentsFromCourses() {
-            CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
-            AssignmentModel a1 = buildAssignment("a1", course);
-            AssignmentModel a2 = buildAssignment("a2", course);
-            course.getAssignments().addAll(List.of(a1, a2));
+        @ParameterizedTest
+        @MethodSource("provideNonAdminUsers")
+        @DisplayName("{0} aggregates assignments from enrolled courses")
+        void testGetAllAssignments_nonAdminGetsAssignmentsFromCourses(Role role, UserModel user) {
+            CourseModel courseOne = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
+            CourseModel courseTwo = new CourseModel("course-2", "Course 2", "C2", null, null, new Date(), new Date());
+            AssignmentModel a1 = buildAssignment("a1", courseOne);
+            AssignmentModel a2 = buildAssignment("a2", courseOne);
+            AssignmentModel b1 = buildAssignment("b1", courseTwo);
+            courseOne.addAssignment(a1);
+            courseOne.addAssignment(a2);
+            courseTwo.addAssignment(b1);
 
-            when(authService.getCurrentUser()).thenReturn(studentUser);
-            when(courseService.getAllCourses()).thenReturn(List.of(course));
+            when(authService.getCurrentUser()).thenReturn(user);
+            when(courseService.getAllCourses()).thenReturn(List.of(courseOne, courseTwo));
 
             List<AssignmentModel> result = assignmentService.getAllAssignments();
 
-            assertEquals(2, result.size());
-            assertTrue(result.containsAll(List.of(a1, a2)));
+            assertEquals(3, result.size());
+            assertTrue(result.containsAll(List.of(a1, a2, b1)));
             verify(assignmentRepository, never()).findAll();
         }
 
         @Test
         @DisplayName("Non-admin returns empty list when no courses")
-        void nonAdminNoCoursesReturnsEmpty() {
+        void testGetAllAssignments_nonAdminNoCoursesReturnsEmpty() {
             when(authService.getCurrentUser()).thenReturn(studentUser);
             when(courseService.getAllCourses()).thenReturn(List.of());
 
             List<AssignmentModel> result = assignmentService.getAllAssignments();
 
             assertTrue(result.isEmpty());
+        }
+
+        static Stream<Arguments> provideNonAdminUsers() {
+            return Stream.of(
+                Arguments.of(Role.INSTRUCTOR, instructorUser),
+                Arguments.of(Role.STUDENT, studentUser)
+            );
         }
     }
 
@@ -185,21 +202,39 @@ public class AssignmentServiceTest {
     class GetAssignmentByIdTests {
         @Test
         @DisplayName("Returns assignment when found")
-        void returnsAssignmentWhenFound() {
-            AssignmentModel assignment = buildAssignment("a1", new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date()));
+        void testGetAssignmentsById_returnsAssignmentWhenFound() {
+            CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
+            AssignmentModel assignment = buildAssignment("a1", course);
+            doNothing().when(courseService).userAllowedToAccessCourse(course);
             when(assignmentRepository.findById("a1")).thenReturn(Optional.of(assignment));
 
             AssignmentModel result = assignmentService.getAssignmentById("a1");
 
             assertEquals(assignment, result);
+            verify(courseService).userAllowedToAccessCourse(course);
         }
 
         @Test
         @DisplayName("Throws when assignment not found")
-        void throwsWhenNotFound() {
+        void testGetAssignmentsById_throwsWhenNotFound() {
             when(assignmentRepository.findById("missing")).thenReturn(Optional.empty());
 
             assertThrows(AssignmentNotFoundException.class, () -> assignmentService.getAssignmentById("missing"));
+            verify(courseService, never()).userAllowedToAccessCourse(any());
+        }
+
+        @Test
+        @DisplayName("Throws when user not allowed to access assignment")
+        void testGetAssignmentsById_throwsWhenUnauthorizedAccess() {
+            CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
+            AssignmentModel assignment = buildAssignment("a1", course);
+            when(assignmentRepository.findById("a1")).thenReturn(Optional.of(assignment));
+            org.mockito.Mockito.doThrow(new UserNotAuthorizedException(""))
+                .when(courseService).userAllowedToAccessCourse(course);
+
+            assertThrows(UserNotAuthorizedException.class, () -> assignmentService.getAssignmentById("a1"));
+
+            verify(courseService).userAllowedToAccessCourse(course);
         }
     }
 
@@ -208,7 +243,7 @@ public class AssignmentServiceTest {
     class CreateAssignmentTests {
         @Test
         @DisplayName("Creates assignment without files")
-        void createWithoutFiles() {
+        void testCreateAssignment_createWithoutFiles() {
             CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
             AssignmentModel assignment = buildAssignment(null, null);
             AssignmentModel saved = buildAssignment("saved-id", course);
@@ -225,8 +260,8 @@ public class AssignmentServiceTest {
         }
 
         @Test
-        @DisplayName("Rejects oversized file before saving")
-        void createWithOversizedFile() throws Exception {
+        @DisplayName("Rejects oversized files")
+        void testCreateAssignment_createWithOversizedFile() throws Exception {
             ReflectionTestUtils.setField(assignmentService, "fileUploadSizeLimit", 5L);
             MockMultipartFile bigFile = new MockMultipartFile("file", "f.txt", "text/plain", new byte[10]);
 
@@ -239,8 +274,8 @@ public class AssignmentServiceTest {
         }
 
         @Test
-        @DisplayName("Creates assignment with files and saves twice")
-        void createWithFiles() throws Exception {
+        @DisplayName("Creates assignment with files")
+        void testCreateAssignment_createWithFiles() throws Exception {
             CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
             AssignmentModel assignment = buildAssignment(null, null);
             AssignmentModel saved = buildAssignment("saved-id", course);
@@ -263,8 +298,8 @@ public class AssignmentServiceTest {
         }
 
         @Test
-        @DisplayName("Create with null files saves once")
-        void createWithNullFiles() throws Exception {
+        @DisplayName("Create with null files")
+        void testCreateAssignment_createWithNullFiles() throws Exception {
             CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
             AssignmentModel assignment = buildAssignment(null, null);
             AssignmentModel saved = buildAssignment("saved-id", course);
@@ -281,8 +316,8 @@ public class AssignmentServiceTest {
         }
 
         @Test
-        @DisplayName("Unauthorized create prevents save")
-        void createUnauthorized() {
+        @DisplayName("Unauthorized create throws UserNotAuthorizedException")
+        void testCreateAssignment_createUnauthorized() {
             CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
             AssignmentModel assignment = buildAssignment(null, null);
             when(courseService.getCourseById("course-1")).thenReturn(course);
@@ -301,7 +336,7 @@ public class AssignmentServiceTest {
     class UpdateAssignmentTests {
         @Test
         @DisplayName("Updates fields when authorized")
-        void updatesAssignment() {
+        void testUpdateAssignment_updatesAssignment() {
             CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
             AssignmentModel existing = buildAssignment("a1", course);
             AssignmentModel updated = buildAssignment(null, course);
@@ -329,7 +364,7 @@ public class AssignmentServiceTest {
 
         @Test
         @DisplayName("Update with oversized file is blocked")
-        void updateWithOversizedFile() throws Exception {
+        void testUpdateAssignment_updateWithOversizedFile() throws IOException {
             ReflectionTestUtils.setField(assignmentService, "fileUploadSizeLimit", 1L);
             MockMultipartFile bigFile = new MockMultipartFile("file", "f.txt", "text/plain", new byte[5]);
 
@@ -347,7 +382,7 @@ public class AssignmentServiceTest {
 
         @Test
         @DisplayName("Update with replaceAll removes old files and adds new ones")
-        void updateReplaceAll() throws Exception {
+        void testUpdateAssignment_replaceAll() throws Exception {
             CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
             AssignmentModel existing = buildAssignment("a1", course);
             FileModel old1 = buildFile("f1");
@@ -376,7 +411,7 @@ public class AssignmentServiceTest {
 
         @Test
         @DisplayName("Update selectively removes files")
-        void updateSelectiveRemove() throws Exception {
+        void testUpdateAssignment_updateSelectiveRemove() throws Exception {
             CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
             AssignmentModel existing = buildAssignment("a1", course);
             FileModel keep = buildFile("keep");
@@ -405,7 +440,7 @@ public class AssignmentServiceTest {
 
         @Test
         @DisplayName("Update adds files without removal")
-        void updateAddFilesOnly() throws Exception {
+        void testUpdateAssignment_updateAddFilesOnly() throws Exception {
             CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
             AssignmentModel existing = buildAssignment("a1", course);
             FileModel keep = buildFile("keep");
@@ -436,7 +471,7 @@ public class AssignmentServiceTest {
 
         @Test
         @DisplayName("Update adds files when list initially null")
-        void updateAddsWhenFilesNull() throws Exception {
+        void testUpdateAssignment_updateAddsWhenFilesNull() throws Exception {
             CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
             AssignmentModel existing = buildAssignment("a1", course);
             existing.setFiles(null);
@@ -465,7 +500,7 @@ public class AssignmentServiceTest {
 
         @Test
         @DisplayName("Update throws when unauthorized")
-        void updateUnauthorized() {
+        void testUpdateAssignment_updateUnauthorized() {
             CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
             AssignmentModel existing = buildAssignment("a1", course);
             when(assignmentRepository.findById("a1")).thenReturn(Optional.of(existing));
@@ -480,7 +515,7 @@ public class AssignmentServiceTest {
 
         @Test
         @DisplayName("Update throws when assignment missing")
-        void updateNotFound() {
+        void testUpdateAssignment_updateNotFound() {
             when(assignmentRepository.findById("missing")).thenReturn(Optional.empty());
 
             assertThrows(AssignmentNotFoundException.class,
@@ -492,19 +527,147 @@ public class AssignmentServiceTest {
     @DisplayName("patchAssignment Tests")
     class PatchAssignmentTests {
         @Test
-        @DisplayName("Patches only provided fields")
-        void patchesPartialFields() {
+        @DisplayName("Patches name field only")
+        void testPatchAssignment_patchNameOnly() {
             CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
             AssignmentModel existing = buildAssignment("a1", course);
-            existing.setDescription("Old");
+            String originalDesc = existing.getDescription();
+            Boolean originalVisible = existing.getVisible();
+            Date originalDue = existing.getDueDate();
+
             AssignmentModel patch = new AssignmentModel();
-            patch.setDescription("New desc");
-            Date newDue = new Date(System.currentTimeMillis() + 5000);
-            patch.setDueDate(newDue);
+            patch.setName("New Name");
+
+            when(assignmentRepository.findById("a1")).thenReturn(Optional.of(existing));
+            doNothing().when(courseService).userAllowedToEditCourse(course);
+            when(assignmentRepository.save(existing)).thenReturn(existing);
+
+            AssignmentModel result = assignmentService.patchAssignment("a1", patch);
+
+            assertEquals("New Name", result.getName());
+            assertEquals(originalDesc, result.getDescription());
+            assertEquals(originalVisible, result.getVisible());
+            assertEquals(originalDue, result.getDueDate());
+            verify(assignmentRepository).save(existing);
+        }
+
+        @Test
+        @DisplayName("Patches description field only")
+        void testPatchAssignment_patchDescriptionOnly() {
+            CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
+            AssignmentModel existing = buildAssignment("a1", course);
+            String originalName = existing.getName();
+            Boolean originalVisible = existing.getVisible();
+            Date originalDue = existing.getDueDate();
+
+            AssignmentModel patch = new AssignmentModel();
+            patch.setDescription("New description");
+
+            when(assignmentRepository.findById("a1")).thenReturn(Optional.of(existing));
+            doNothing().when(courseService).userAllowedToEditCourse(course);
+            when(assignmentRepository.save(existing)).thenReturn(existing);
+
+            AssignmentModel result = assignmentService.patchAssignment("a1", patch);
+
+            assertEquals("New description", result.getDescription());
+            assertEquals(originalName, result.getName());
+            assertEquals(originalVisible, result.getVisible());
+            assertEquals(originalDue, result.getDueDate());
+            verify(assignmentRepository).save(existing);
+        }
+
+        @Test
+        @DisplayName("Patches visible field only")
+        void testPatchAssignment_patchVisibleOnly() {
+            CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
+            AssignmentModel existing = buildAssignment("a1", course);
+            existing.setVisible(true);
+            String originalName = existing.getName();
+            String originalDesc = existing.getDescription();
+            Date originalDue = existing.getDueDate();
+
+            AssignmentModel patch = new AssignmentModel();
             patch.setVisible(false);
+
+            when(assignmentRepository.findById("a1")).thenReturn(Optional.of(existing));
+            doNothing().when(courseService).userAllowedToEditCourse(course);
+            when(assignmentRepository.save(existing)).thenReturn(existing);
+
+            AssignmentModel result = assignmentService.patchAssignment("a1", patch);
+
+            assertEquals(false, result.getVisible());
+            assertEquals(originalName, result.getName());
+            assertEquals(originalDesc, result.getDescription());
+            assertEquals(originalDue, result.getDueDate());
+            verify(assignmentRepository).save(existing);
+        }
+
+        @Test
+        @DisplayName("Patches dueDate field only")
+        void testPatchAssignment_patchDueDateOnly() {
+            CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
+            AssignmentModel existing = buildAssignment("a1", course);
+            String originalName = existing.getName();
+            String originalDesc = existing.getDescription();
+            Boolean originalVisible = existing.getVisible();
+            Date newDue = new Date(System.currentTimeMillis() + 5000);
+
+            AssignmentModel patch = new AssignmentModel();
+            patch.setDueDate(newDue);
+
+            when(assignmentRepository.findById("a1")).thenReturn(Optional.of(existing));
+            doNothing().when(courseService).userAllowedToEditCourse(course);
+            when(assignmentRepository.save(existing)).thenReturn(existing);
+
+            AssignmentModel result = assignmentService.patchAssignment("a1", patch);
+
+            assertEquals(newDue, result.getDueDate());
+            assertEquals(originalName, result.getName());
+            assertEquals(originalDesc, result.getDescription());
+            assertEquals(originalVisible, result.getVisible());
+            verify(assignmentRepository).save(existing);
+        }
+
+        @Test
+        @DisplayName("Patches dateUpdated field only")
+        void testPatchAssignment_patchDateUpdatedOnly() {
+            CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
+            AssignmentModel existing = buildAssignment("a1", course);
+            String originalName = existing.getName();
+            String originalDesc = existing.getDescription();
+            Boolean originalVisible = existing.getVisible();
+            Date originalDue = existing.getDueDate();
             Date updatedDate = new Date(System.currentTimeMillis() + 6000);
+
+            AssignmentModel patch = new AssignmentModel();
             patch.setDateUpdated(updatedDate);
+
+            when(assignmentRepository.findById("a1")).thenReturn(Optional.of(existing));
+            doNothing().when(courseService).userAllowedToEditCourse(course);
+            when(assignmentRepository.save(existing)).thenReturn(existing);
+
+            AssignmentModel result = assignmentService.patchAssignment("a1", patch);
+
+            assertEquals(updatedDate, result.getDateUpdated());
+            assertEquals(originalName, result.getName());
+            assertEquals(originalDesc, result.getDescription());
+            assertEquals(originalVisible, result.getVisible());
+            assertEquals(originalDue, result.getDueDate());
+            verify(assignmentRepository).save(existing);
+        }
+
+        @Test
+        @DisplayName("Patches course field only")
+        void testPatchAssignment_patchCourseOnly() {
+            CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
+            AssignmentModel existing = buildAssignment("a1", course);
+            String originalName = existing.getName();
+            String originalDesc = existing.getDescription();
+            Boolean originalVisible = existing.getVisible();
+            Date originalDue = existing.getDueDate();
+
             CourseModel newCourse = new CourseModel("course-2", "Course2", "C2", null, null, new Date(), new Date());
+            AssignmentModel patch = new AssignmentModel();
             patch.setCourse(newCourse);
 
             when(assignmentRepository.findById("a1")).thenReturn(Optional.of(existing));
@@ -513,18 +676,84 @@ public class AssignmentServiceTest {
 
             AssignmentModel result = assignmentService.patchAssignment("a1", patch);
 
-            assertEquals("New desc", result.getDescription());
-            assertEquals(existing.getName(), result.getName());
-            assertEquals(newDue, result.getDueDate());
-            assertEquals(false, result.getVisible());
-            assertEquals(updatedDate, result.getDateUpdated());
             assertEquals(newCourse, result.getCourse());
+            assertEquals(originalName, result.getName());
+            assertEquals(originalDesc, result.getDescription());
+            assertEquals(originalVisible, result.getVisible());
+            assertEquals(originalDue, result.getDueDate());
             verify(assignmentRepository).save(existing);
         }
 
         @Test
-        @DisplayName("Patch with files adds and removes correctly")
-        void patchWithFiles() throws Exception {
+        @DisplayName("Patch adds files only without field updates")
+        void testPatchAssignment_patchAddFilesOnly() throws Exception {
+            CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
+            AssignmentModel existing = buildAssignment("a1", course);
+            String originalName = existing.getName();
+            String originalDesc = existing.getDescription();
+
+            AssignmentModel patch = new AssignmentModel();
+            MockMultipartFile upload = new MockMultipartFile("file", "a.txt", "text/plain", new byte[4]);
+            FileModel newFile = buildFile("nf1");
+
+            when(assignmentRepository.findById("a1")).thenReturn(Optional.of(existing));
+            doNothing().when(courseService).userAllowedToEditCourse(course);
+            when(fileService.saveAssignmentFiles(List.of(upload), existing, "course-1"))
+                .thenReturn(List.of(newFile));
+            when(assignmentRepository.save(existing)).thenReturn(existing);
+
+            AssignmentModel result = assignmentService.patchAssignment(
+                "a1",
+                patch,
+                List.of(upload),
+                null,
+                false
+            );
+
+            assertEquals(1, result.getFiles().size());
+            assertEquals(newFile, result.getFiles().get(0));
+            assertEquals(originalName, result.getName());
+            assertEquals(originalDesc, result.getDescription());
+            verify(fileService).saveAssignmentFiles(List.of(upload), existing, "course-1");
+            verify(fileService, never()).deleteFile(any());
+        }
+
+        @Test
+        @DisplayName("Patch removes files only without field updates")
+        void testPatchAssignment_patchRemoveFilesOnly() throws Exception {
+            CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
+            AssignmentModel existing = buildAssignment("a1", course);
+            FileModel keep = buildFile("keep");
+            FileModel remove = buildFile("remove");
+            existing.getFiles().addAll(List.of(keep, remove));
+            String originalName = existing.getName();
+            String originalDesc = existing.getDescription();
+
+            AssignmentModel patch = new AssignmentModel();
+
+            when(assignmentRepository.findById("a1")).thenReturn(Optional.of(existing));
+            doNothing().when(courseService).userAllowedToEditCourse(course);
+            when(assignmentRepository.save(existing)).thenReturn(existing);
+
+            AssignmentModel result = assignmentService.patchAssignment(
+                "a1",
+                patch,
+                null,
+                List.of("remove"),
+                false
+            );
+
+            assertEquals(1, result.getFiles().size());
+            assertEquals(keep, result.getFiles().get(0));
+            assertEquals(originalName, result.getName());
+            assertEquals(originalDesc, result.getDescription());
+            verify(fileService).deleteFile(remove);
+            verify(fileService, never()).saveAssignmentFiles(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Patch adds and removes files in same operation")
+        void testPatchAssignment_patchAddAndRemoveFiles() throws Exception {
             CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
             AssignmentModel existing = buildAssignment("a1", course);
             FileModel keep = buildFile("keep");
@@ -558,12 +787,13 @@ public class AssignmentServiceTest {
         }
 
         @Test
-        @DisplayName("Patch with replaceAll clears and adds new files")
-        void patchReplaceAll() throws Exception {
+        @DisplayName("Patch with replaceAll removes all existing and adds new files")
+        void testPatchAssignment_patchReplaceAll() throws Exception {
             CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
             AssignmentModel existing = buildAssignment("a1", course);
-            FileModel old = buildFile("old");
-            existing.getFiles().add(old);
+            FileModel old1 = buildFile("old1");
+            FileModel old2 = buildFile("old2");
+            existing.getFiles().addAll(List.of(old1, old2));
 
             AssignmentModel patch = new AssignmentModel();
             MockMultipartFile upload = new MockMultipartFile("file", "a.txt", "text/plain", new byte[4]);
@@ -585,12 +815,103 @@ public class AssignmentServiceTest {
 
             assertEquals(1, result.getFiles().size());
             assertEquals(newFile, result.getFiles().get(0));
-            verify(fileService).deleteFile(old);
+            verify(fileService).deleteFile(old1);
+            verify(fileService).deleteFile(old2);
+            verify(fileService).saveAssignmentFiles(List.of(upload), existing, "course-1");
         }
 
         @Test
-        @DisplayName("Patch with oversized file is blocked early")
-        void patchOversizedFile() {
+        @DisplayName("Patch adds files when files collection is initially null")
+        void testPatchAssignment_patchAddFilesWhenNull() throws Exception {
+            CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
+            AssignmentModel existing = buildAssignment("a1", course);
+            existing.setFiles(null);
+
+            AssignmentModel patch = new AssignmentModel();
+            MockMultipartFile upload = new MockMultipartFile("file", "a.txt", "text/plain", new byte[4]);
+            FileModel newFile = buildFile("nf1");
+
+            when(assignmentRepository.findById("a1")).thenReturn(Optional.of(existing));
+            doNothing().when(courseService).userAllowedToEditCourse(course);
+            when(fileService.saveAssignmentFiles(List.of(upload), existing, "course-1"))
+                .thenReturn(List.of(newFile));
+            when(assignmentRepository.save(existing)).thenReturn(existing);
+
+            AssignmentModel result = assignmentService.patchAssignment(
+                "a1",
+                patch,
+                List.of(upload),
+                null,
+                false
+            );
+
+            assertEquals(1, result.getFiles().size());
+            assertEquals(newFile, result.getFiles().get(0));
+            verify(fileService).saveAssignmentFiles(List.of(upload), existing, "course-1");
+        }
+
+        @Test
+        @DisplayName("Patch with no file operations keeps existing files")
+        void testPatchAssignment_patchNoFileOperations() throws Exception {
+            CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
+            AssignmentModel existing = buildAssignment("a1", course);
+            FileModel existing1 = buildFile("existing1");
+            existing.getFiles().add(existing1);
+
+            AssignmentModel patch = new AssignmentModel();
+            patch.setDescription("Patched");
+
+            when(assignmentRepository.findById("a1")).thenReturn(Optional.of(existing));
+            doNothing().when(courseService).userAllowedToEditCourse(course);
+            when(assignmentRepository.save(existing)).thenReturn(existing);
+
+            AssignmentModel result = assignmentService.patchAssignment(
+                "a1",
+                patch,
+                null,
+                null,
+                false
+            );
+
+            assertEquals("Patched", result.getDescription());
+            assertEquals(1, result.getFiles().size());
+            assertEquals(existing1, result.getFiles().get(0));
+            verify(fileService, never()).saveAssignmentFiles(any(), any(), any());
+            verify(fileService, never()).deleteFile(any());
+        }
+
+        @Test
+        @DisplayName("Patch with empty files list keeps existing files")
+        void testPatchAssignment_patchWithEmptyFilesList() throws Exception {
+            CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
+            AssignmentModel existing = buildAssignment("a1", course);
+            FileModel existing1 = buildFile("existing1");
+            existing.getFiles().add(existing1);
+
+            AssignmentModel patch = new AssignmentModel();
+            patch.setName("New Name");
+
+            when(assignmentRepository.findById("a1")).thenReturn(Optional.of(existing));
+            doNothing().when(courseService).userAllowedToEditCourse(course);
+            when(assignmentRepository.save(existing)).thenReturn(existing);
+
+            AssignmentModel result = assignmentService.patchAssignment(
+                "a1",
+                patch,
+                List.of(),
+                null,
+                false
+            );
+
+            assertEquals("New Name", result.getName());
+            assertEquals(1, result.getFiles().size());
+            assertEquals(existing1, result.getFiles().get(0));
+            verify(fileService, never()).saveAssignmentFiles(any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("Patch with oversized file is blocked before database access")
+        void testPatchAssignment_patchOversizedFile() {
             ReflectionTestUtils.setField(assignmentService, "fileUploadSizeLimit", 1L);
             MockMultipartFile bigFile = new MockMultipartFile("file", "f.txt", "text/plain", new byte[5]);
 
@@ -603,11 +924,12 @@ public class AssignmentServiceTest {
             ));
 
             verify(assignmentRepository, never()).findById(any());
+            verify(courseService, never()).userAllowedToEditCourse(any(CourseModel.class));
         }
 
         @Test
         @DisplayName("Patch throws when assignment missing")
-        void patchNotFound() {
+        void testPatchAssignment_patchNotFound() {
             when(assignmentRepository.findById("missing")).thenReturn(Optional.empty());
 
             assertThrows(AssignmentNotFoundException.class,
@@ -616,7 +938,7 @@ public class AssignmentServiceTest {
 
         @Test
         @DisplayName("Patch throws when unauthorized")
-        void patchUnauthorized() {
+        void testPatchAssignment_patchUnauthorized() {
             CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
             AssignmentModel existing = buildAssignment("a1", course);
             when(assignmentRepository.findById("a1")).thenReturn(Optional.of(existing));
@@ -635,7 +957,7 @@ public class AssignmentServiceTest {
     class DeleteAssignmentTests {
         @Test
         @DisplayName("Deletes assignment when authorized")
-        void deletesAuthorized() {
+        void testDeleteAssignment_deletesAuthorized() {
             CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
             AssignmentModel assignment = buildAssignment("a1", course);
             when(assignmentRepository.findById("a1")).thenReturn(Optional.of(assignment));
@@ -648,7 +970,7 @@ public class AssignmentServiceTest {
 
         @Test
         @DisplayName("Delete throws when unauthorized")
-        void deleteUnauthorized() {
+        void testDeleteAssignment_deleteUnauthorized() {
             CourseModel course = new CourseModel("course-1", "Course", "C1", null, null, new Date(), new Date());
             AssignmentModel assignment = buildAssignment("a1", course);
             when(assignmentRepository.findById("a1")).thenReturn(Optional.of(assignment));
@@ -662,7 +984,7 @@ public class AssignmentServiceTest {
 
         @Test
         @DisplayName("Delete throws when assignment missing")
-        void deleteNotFound() {
+        void testDeleteAssignment_deleteNotFound() {
             when(assignmentRepository.findById("missing")).thenReturn(Optional.empty());
 
             assertThrows(AssignmentNotFoundException.class, () -> assignmentService.deleteAssignment("missing"));
