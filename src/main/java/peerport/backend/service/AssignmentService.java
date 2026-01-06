@@ -65,6 +65,55 @@ public class AssignmentService {
     }
 
     /**
+     * Get all assignments
+     * 
+     * @return List of AssignmentModels
+     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthorizedException if user is not authorized to view (Handled in GlobalExceptionHandler)
+     */
+    public List<AssignmentModel> getAllAssignments() {
+        // Get the users role
+        UserModel user = authService.getCurrentUser();
+
+        // Check user role
+        if (user.getRole() == Role.ADMIN) {
+            return assignmentRepository.findAll();
+        }
+
+        // Get all courses the user is in
+        List<CourseModel> courses = courseService.getAllCourses();
+
+        // Get all the assignments for those courses
+        List<AssignmentModel> assignments = new ArrayList<>();
+        for (CourseModel course: courses) {
+            assignments.addAll(course.getAssignments());
+        }
+
+        // Return the assignments
+        return assignments;
+    }
+
+    /**
+     * Get assignment by ID
+     * 
+     * @param assignmentId - ID of the assignment to get
+     * @return AssignmentModel with the given ID
+     * @throws AssignmentNotFoundException if assignment not found (Handled in GlobalExceptionHandler)
+     */
+    public AssignmentModel getAssignmentById(String assignmentId) {
+        // Get the assignment by ID
+        Optional<AssignmentModel> assignment = assignmentRepository.findById(assignmentId);
+
+        // Check if the assignment exists or not
+        if (assignment.isEmpty()) {
+            throw new AssignmentNotFoundException(assignmentId);
+        }
+
+        // Return the assignment
+        return assignment.get();
+    }
+
+    /**
      * Create assignment
      * 
      * @param assignment - AssignmentModel to create
@@ -134,55 +183,6 @@ public class AssignmentService {
         
         // Return saved assignment
         return savedAssignment;
-    }
-
-    /**
-     * Get all assignments
-     * 
-     * @return List of AssignmentModels
-     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
-     * @throws UserNotAuthorizedException if user is not authorized to view (Handled in GlobalExceptionHandler)
-     */
-    public List<AssignmentModel> getAllAssignments() {
-        // Get the users role
-        UserModel user = authService.getCurrentUser();
-
-        // Check user role
-        if (user.getRole() == Role.ADMIN) {
-            return assignmentRepository.findAll();
-        }
-
-        // Get all courses the user is in
-        List<CourseModel> courses = courseService.getAllCourses();
-
-        // Get all the assignments for those courses
-        List<AssignmentModel> assignments = new ArrayList<>();
-        for (CourseModel course: courses) {
-            assignments.addAll(course.getAssignments());
-        }
-
-        // Return the assignments
-        return assignments;
-    }
-
-    /**
-     * Get assignment by ID
-     * 
-     * @param assignmentId - ID of the assignment to get
-     * @return AssignmentModel with the given ID
-     * @throws AssignmentNotFoundException if assignment not found (Handled in GlobalExceptionHandler)
-     */
-    public AssignmentModel getAssignmentById(String assignmentId) {
-        // Get the assignment by ID
-        Optional<AssignmentModel> assignment = assignmentRepository.findById(assignmentId);
-
-        // Check if the assignment exists or not
-        if (assignment.isEmpty()) {
-            throw new AssignmentNotFoundException(assignmentId);
-        }
-
-        // Return the assignment
-        return assignment.get();
     }
 
     /**
