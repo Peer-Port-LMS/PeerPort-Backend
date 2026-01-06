@@ -48,6 +48,54 @@ public class AnnouncementService {
         this.fileService = fileService;
     }
 
+    /**
+     * Get all announcements
+     * 
+     * @return List of AnnouncementModels
+     */
+    public List<AnnouncementModel> getAllAnnouncements() {
+        // Get the current users role
+        UserModel user = authService.getCurrentUser();
+        Role role = user.getRole();
+
+        // If admin, return all announcements
+        if (role == Role.ADMIN) {
+            return announcementsRepository.findAll();
+        }
+
+        // Get all the courses for the user 
+        // (Filtering is done in CourseService based on role)
+        List<CourseModel> courses = courseService.getAllCourses();
+
+        // Get all the announcements for those courses
+        List<AnnouncementModel> allAnnouncements = new ArrayList<>();
+        for (CourseModel course : courses) {
+            allAnnouncements.addAll(course.getAnnouncements());
+        }
+
+        // Return the announcements
+        return allAnnouncements;
+    }
+
+    /**
+     * Get announcement by ID
+     * 
+     * @param announcementId - ID of the announcement to get
+     * @return The AnnouncementModel
+     * @throws AnnouncementNotFoundException if announcement not found (Handled in GlobalExceptionHandler)
+     */
+    public AnnouncementModel getAnnouncementById(String announcementId) {
+        // Get the announcement by ID
+        Optional<AnnouncementModel> announcement = announcementsRepository.findById(announcementId);
+
+        // Check if its empty
+        if (announcement.isEmpty()) {
+            throw new AnnouncementNotFoundException(announcementId);
+        }
+
+        // Return the announcement
+        return announcement.get();
+    }
 
     /**
      * Create announcement
@@ -119,55 +167,6 @@ public class AnnouncementService {
 
         // Return the announcement with any attached files
         return savedAnnouncement;
-    }
-
-    /**
-     * Get all announcements
-     * 
-     * @return List of AnnouncementModels
-     */
-    public List<AnnouncementModel> getAllAnnouncements() {
-        // Get the current users role
-        UserModel user = authService.getCurrentUser();
-        Role role = user.getRole();
-
-        // If admin, return all announcements
-        if (role == Role.ADMIN) {
-            return announcementsRepository.findAll();
-        }
-
-        // Get all the courses for the user 
-        // (Filtering is done in CourseService based on role)
-        List<CourseModel> courses = courseService.getAllCourses();
-
-        // Get all the announcements for those courses
-        List<AnnouncementModel> allAnnouncements = new ArrayList<>();
-        for (CourseModel course : courses) {
-            allAnnouncements.addAll(course.getAnnouncements());
-        }
-
-        // Return the announcements
-        return allAnnouncements;
-    }
-
-    /**
-     * Get announcement by ID
-     * 
-     * @param announcementId - ID of the announcement to get
-     * @return The AnnouncementModel
-     * @throws AnnouncementNotFoundException if announcement not found (Handled in GlobalExceptionHandler)
-     */
-    public AnnouncementModel getAnnouncementById(String announcementId) {
-        // Get the announcement by ID
-        Optional<AnnouncementModel> announcement = announcementsRepository.findById(announcementId);
-
-        // Check if its empty
-        if (announcement.isEmpty()) {
-            throw new AnnouncementNotFoundException(announcementId);
-        }
-
-        // Return the announcement
-        return announcement.get();
     }
 
     /**
