@@ -52,6 +52,7 @@ public class AnnouncementService {
      * Get all announcements
      * 
      * @return List of AnnouncementModels
+     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
      */
     public List<AnnouncementModel> getAllAnnouncements() {
         // Get the current users role
