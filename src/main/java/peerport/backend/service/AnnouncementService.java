@@ -84,6 +84,8 @@ public class AnnouncementService {
      * @param announcementId - ID of the announcement to get
      * @return The AnnouncementModel
      * @throws AnnouncementNotFoundException if announcement not found (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthorizedException if user is not authorized to access (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler
      */
     public AnnouncementModel getAnnouncementById(String announcementId) {
         // Get the announcement by ID
