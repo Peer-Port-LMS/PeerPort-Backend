@@ -152,18 +152,9 @@ public class AnnouncementService {
                 }
             }
         }
-        
-        // Get the course
-        CourseModel course = courseService.getCourseById(courseId);
-
-        // Check if the user is allowed to edit the course
-        courseService.userAllowedToEditCourse(course);
-
-        // Set the course to the announcement
-        announcement.setCourse(course);
 
         // Save the announcement first to ensure ID is available for file naming
-        AnnouncementModel savedAnnouncement = announcementsRepository.save(announcement);
+        AnnouncementModel savedAnnouncement = createAnnouncement(courseId, announcement);
 
         // Save the files to the announcement
         if (files != null) {
