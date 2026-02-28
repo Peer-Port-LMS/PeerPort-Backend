@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -26,6 +27,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -47,6 +50,7 @@ import peerport.backend.service.AuthService;
 import peerport.backend.service.CourseService;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("Announcement Service Test")
 public class AnnouncementServiceTest {
     
@@ -82,6 +86,7 @@ public class AnnouncementServiceTest {
     void setup() {
         makeUsers();
         ReflectionTestUtils.setField(announcementService, "fileUploadSizeLimit", 5_000_000L);
+        lenient().when(authService.getCurrentUser()).thenReturn(adminUser);
     }
 
 
@@ -383,9 +388,13 @@ public class AnnouncementServiceTest {
         void testUpdateAnnouncement_TitleAndContentOnly() throws Exception {
             // Arrange
             CourseModel course = new CourseModel("course-1", "Course 1", "code", null, "desc", null, null);
-            AnnouncementModel existing = new AnnouncementModel("Old Title", "Old Content", null, null);
+            AnnouncementModel existing = new AnnouncementModel();
+            existing.setTitle("Old Title");
+            existing.setContent("Old Content");
             existing.setCourse(course);
-            AnnouncementModel updated = new AnnouncementModel("New Title", "New Content", null, null);
+            AnnouncementModel updated = new AnnouncementModel();
+            updated.setTitle("New Title");
+            updated.setContent("New Content");
             
             when(announcementsRepository.findById("id-1")).thenReturn(Optional.of(existing));
             doNothing().when(courseService).userAllowedToAccessCourse(course);
@@ -601,11 +610,15 @@ public class AnnouncementServiceTest {
         void testUpdateAnnouncement_EmptyRemoveFileIdsList() throws Exception {
             // Arrange
             CourseModel course = new CourseModel("course-1", "Course 1", "code", null, "desc", null, null);
-            AnnouncementModel existing = new AnnouncementModel("Title", "Content", null, null);
+            AnnouncementModel existing = new AnnouncementModel();
+            existing.setTitle("Title");
+            existing.setContent("Content");
             existing.setCourse(course);
             FileModel existingFile = new FileModel("existing.pdf", "path/existing.pdf", "pdf", "application/pdf");
             existing.getFiles().add(existingFile);
-            AnnouncementModel updated = new AnnouncementModel("New Title", "New Content", null, null);
+            AnnouncementModel updated = new AnnouncementModel();
+            updated.setTitle("New Title");
+            updated.setContent("New Content");
             
             when(announcementsRepository.findById("id-1")).thenReturn(Optional.of(existing));
             doNothing().when(courseService).userAllowedToAccessCourse(course);
@@ -743,7 +756,9 @@ public class AnnouncementServiceTest {
         void testPatchAnnouncement_TitleOnly() {
             // Arrange
             CourseModel course = new CourseModel("course-1", "Course 1", "code", null, "desc", null, null);
-            AnnouncementModel existing = new AnnouncementModel("Old Title", "Old Content", null, null);
+            AnnouncementModel existing = new AnnouncementModel();
+            existing.setTitle("Old Title");
+            existing.setContent("Old Content");
             existing.setCourse(course);
             AnnouncementModel patch = new AnnouncementModel();
             patch.setTitle("New Title");
@@ -767,7 +782,9 @@ public class AnnouncementServiceTest {
         void testPatchAnnouncement_ContentOnly() {
             // Arrange
             CourseModel course = new CourseModel("course-1", "Course 1", "code", null, "desc", null, null);
-            AnnouncementModel existing = new AnnouncementModel("Old Title", "Old Content", null, null);
+            AnnouncementModel existing = new AnnouncementModel();
+            existing.setTitle("Old Title");
+            existing.setContent("Old Content");
             existing.setCourse(course);
             AnnouncementModel patch = new AnnouncementModel();
             patch.setContent("New Content");
@@ -987,15 +1004,14 @@ public class AnnouncementServiceTest {
         @DisplayName("Patch announcement throws UserNotAuthorizedException when user is not authorized")
         void testPatchAnnouncement_UserNotAuthorized() {
             // Arrange
+            UserModel unauthorizedUser = new UserModel();
             CourseModel course = new CourseModel("course-1", "Course 1", "code", null, "desc", null, null);
             AnnouncementModel existing = new AnnouncementModel("Title", "Content", null, null);
             existing.setCourse(course);
             AnnouncementModel patch = new AnnouncementModel();
             patch.setTitle("New Title");
             when(announcementsRepository.findById("id-1")).thenReturn(Optional.of(existing));
-            doNothing().when(courseService).userAllowedToAccessCourse(course);
-            org.mockito.Mockito.doThrow(new UserNotAuthorizedException("Not authorized"))
-                .when(courseService).userAllowedToEditCourse(course);
+            when(authService.getCurrentUser()).thenReturn(unauthorizedUser);
 
             // Act & Assert
             assertThrows(UserNotAuthorizedException.class, () -> {

@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,6 +30,7 @@ import peerport.backend.model.CourseModel;
 
 @Service
 public class ContentService {
+    protected static final Logger logger = LogManager.getLogger();
     
     @Autowired
     private ContentRepository contentRepository;
@@ -51,12 +54,17 @@ public class ContentService {
      * @throws FailedToParseFormDataException if validation fails
      */
     public void validateContent(ContentModel content) {
+        logger.debug("Validating content: {}", content);
+
         if (content == null) {
+            logger.warn("Content data is required but was null");
             throw new FailedToParseFormDataException("Content data is required.");
         }
 
         Set<ConstraintViolation<ContentModel>> violations = validator.validate(content);
         if (!violations.isEmpty()) {
+            logger.trace("Content validation failed with {} violations", violations.size());
+
             StringBuilder sb = new StringBuilder();
             for (ConstraintViolation<ContentModel> violation : violations) {
                 sb.append(violation.getPropertyPath().toString())
@@ -64,8 +72,12 @@ public class ContentService {
                     .append(violation.getMessage())
                     .append("; ");
             }
+
+            logger.warn("Content data validation failed: {}", sb.toString());
             throw new FailedToParseFormDataException("Content data validation failed: " + sb.toString());
         }
+
+        logger.debug("Content validation passed with no violations");
     }
 
     /**
@@ -74,12 +86,17 @@ public class ContentService {
      * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
      */
     public List<ContentModel> getAllContent() {
+        logger.debug("Getting all content for the current user");
+
         // Get the users role
         UserModel user = authService.getCurrentUser();
         Role role = user.getRole();
 
         // Check if the user is an admin
-        if (role == Role.ADMIN) return contentRepository.findAll();
+        if (role == Role.ADMIN) {
+            logger.debug("User is an admin, returning all content");
+            return contentRepository.findAll();
+        }
 
         // For non-admin users, only return content from courses they are enrolled in or instructing
         List<ContentModel> accessibleContent = new ArrayList<>();
@@ -91,6 +108,7 @@ public class ContentService {
         });
 
         // Return the accessible content
+        logger.debug("Returning {} content items accessible to the user", accessibleContent.size());
         return accessibleContent;
     }
 
@@ -100,6 +118,8 @@ public class ContentService {
      * @return A list of ContentWithChildrenDTO representing the structured content
      */
     public List<ContentWithChildrenDTO> getStructuredContent() {
+        logger.debug("Getting structured content for the current user");
+
         // Get the content from the repository
         List<ContentModel> contentList = getAllContent();
 
@@ -119,6 +139,7 @@ public class ContentService {
         }
 
         // Return the structured content
+        logger.debug("Returning structured content with {} root items", rootContent.size());
         return rootContent;
     }
 
@@ -130,11 +151,14 @@ public class ContentService {
      * @throws ContentNotFoundException if content with the given ID does not exist
      */
     public ContentModel getContentById(String contentId) {
+        logger.debug("Getting content by ID: {}", contentId);
+
         // Get the content by ID
         Optional<ContentModel> contentOpt = contentRepository.findById(contentId);
 
         // Check if the content exists
         if (contentOpt.isEmpty()) {
+            logger.warn("Content with ID {} not found", contentId);
             throw new ContentNotFoundException(contentId);
         }
         
@@ -144,6 +168,7 @@ public class ContentService {
         userAllowedToAccessContent(content);
         
         // Return the content
+        logger.debug("Content with ID {} retrieved successfully", contentId);
         return content;
     }
 
@@ -159,6 +184,8 @@ public class ContentService {
      */
     @Transactional
     public ContentModel createContent(ContentModel content, String courseId) {
+        logger.debug("Creating content for course ID: {}", courseId);
+
         // Get the course by ID
         CourseModel course = courseService.getCourseById(courseId);
 
@@ -172,6 +199,7 @@ public class ContentService {
         userAllowedToEditContent(saved);
 
         // Return the saved content
+        logger.debug("Content created successfully with ID: {}", saved.getContentId());
         return saved;
     }
 
@@ -187,6 +215,8 @@ public class ContentService {
      */
     @Transactional
     public ContentModel createContent(ContentModel content, String courseId, List<MultipartFile> files) throws IOException {
+        logger.debug("Creating content with files for course ID: {}", courseId);
+
         // Get the course
         CourseModel course = courseService.getCourseById(courseId);
 
@@ -203,6 +233,7 @@ public class ContentService {
         applyFileChanges(saved, files, null, null);
 
         // Return the saved content
+        logger.debug("Content with files created successfully with ID: {}", saved.getContentId());
         return contentRepository.save(saved);
     }
 
@@ -217,6 +248,8 @@ public class ContentService {
      */
     @Transactional
     public ContentModel updateContent(ContentModel content, ContentModel updatedContent) {
+        logger.debug("Updating content with ID: {}", content.getContentId());
+
         // Check if user allowed to modify content
         userAllowedToEditContent(content);
 
@@ -226,6 +259,7 @@ public class ContentService {
         content.setVisible(updatedContent.getVisible());
 
         // Save and return the updated content
+        logger.debug("Content with ID {} updated successfully", content.getContentId());
         return contentRepository.save(content);
     }
 
@@ -241,10 +275,13 @@ public class ContentService {
      */
     @Transactional
     public ContentModel updateContent(String contentId, ContentModel updatedContent) {
+        logger.debug("Updating content with ID: {}", contentId);
+
         // Get the content from the repository
         ContentModel content = getContentById(contentId);
 
         // Delegate to the core update method, which handles authorization and field updates
+        logger.debug("Delegating to updateContent with the retrieved content and updated content data");
         return updateContent(content, updatedContent);
     }
 
@@ -270,6 +307,8 @@ public class ContentService {
         List<String> removeFileIds,
         Boolean replaceAll
     ) throws IOException {
+        logger.debug("Updating content with ID: {} with file changes", contentId);
+
         // Get the content from the repository
         ContentModel content = getContentById(contentId);
 
@@ -277,6 +316,7 @@ public class ContentService {
         applyFileChanges(content, files, removeFileIds, replaceAll);
 
         // Save and return the updated content
+        logger.debug("File changes applied successfully for content ID: {}", contentId);
         return updateContent(content, updatedContent);
     }
 
@@ -292,6 +332,8 @@ public class ContentService {
      */
     @Transactional
     public ContentModel patchContent(ContentModel content, ContentModel patchedContent) {
+        logger.debug("Patching content with ID: {}", content.getContentId());
+
         // Check if user allowed to modify content
         userAllowedToEditContent(content);
 
@@ -307,6 +349,7 @@ public class ContentService {
         }
 
         // Save the patched content
+        logger.debug("Content with ID {} patched successfully", content.getContentId());
         return contentRepository.save(content);
     }
 
@@ -322,10 +365,13 @@ public class ContentService {
      */
     @Transactional
     public ContentModel patchContent(String contentId, ContentModel patchedContent) {
+        logger.debug("Patching content with ID: {}", contentId);
+
         // Get the content by ID
         ContentModel content = getContentById(contentId);
 
         // Patch other fields
+        logger.debug("Delegating to patchContent with the retrieved content and patched content data");
         return patchContent(content, patchedContent);
     }
 
@@ -343,6 +389,8 @@ public class ContentService {
      */
     @Transactional
     public ContentModel patchContent(String contentId, ContentModel patchedContent, List<MultipartFile> files) throws IOException {
+        logger.debug("Patching content with ID: {} with file changes", contentId);
+
         // Get the content by ID
         ContentModel content = getContentById(contentId);
 
@@ -353,6 +401,7 @@ public class ContentService {
         applyFileChanges(content, files, null, null);
 
         // Patch other fields
+        logger.debug("File changes applied successfully for content ID: {}", contentId);
         return patchContent(content, patchedContent);
     }
 
@@ -366,12 +415,15 @@ public class ContentService {
      */
     @Transactional
     public void deleteContent(String contentId) {
+        logger.debug("Deleting content with ID: {}", contentId);
+
         // Check if the user is allowed to delete the content
         // Also checks if the content exists
         userAllowedToEditContent(contentId);
 
         // Delete the content
         contentRepository.deleteById(contentId);
+        logger.debug("Content with ID {} deleted successfully", contentId);
     }
 
 
@@ -392,16 +444,27 @@ public class ContentService {
         List<String> removeFileIds,
         Boolean replaceAll
     ) throws IOException{
+        logger.debug("Applying file changes to content with ID: {}", content.getContentId());
+
         if (content.getFiles() == null) {
             content.setFiles(new ArrayList<>());
         }
 
+        // If replaceAll is true, remove all existing files
         if (Boolean.TRUE.equals(replaceAll)) {
+            logger.trace("replaceAll is true, removing all existing files from content with ID: {}", content.getContentId());
+
             for (FileModel existing : content.getFiles()) {
                 fileService.deleteFile(existing);
             }
             content.getFiles().clear();
+
+            logger.trace("All existing files removed successfully from content with ID: {}", content.getContentId());
+        
+        // If removeFileIds is provided, remove the specified files
         } else if (removeFileIds != null) {
+            logger.trace("Removing files with IDs {} from content with ID: {}", removeFileIds, content.getContentId());
+
             List<FileModel> remaining = new ArrayList<>();
             for (FileModel existing : content.getFiles()) {
                 if (removeFileIds.contains(existing.getFileId())) {
@@ -411,19 +474,25 @@ public class ContentService {
                 }
             }
             content.setFiles(remaining);
+
+            logger.trace("Specified files removed successfully from content with ID: {}", content.getContentId());
         }
 
+        // If filesToAdd is provided, save and add the new files
         if (filesToAdd != null) {
+            logger.trace("Adding {} new files to content with ID: {}", filesToAdd.size(), content.getContentId());
             List<FileModel> savedFiles = fileService.saveContentFiles(
                 filesToAdd,
                 content,
                 content.getCourse().getCourseId()
             );
             content.getFiles().addAll(savedFiles);
+            logger.trace("New files added successfully to content with ID: {}", content.getContentId());
         }
 
         // Save the updated content
         contentRepository.save(content);
+        logger.debug("File changes applied successfully to content with ID: {}", content.getContentId());
     }
 
 
@@ -435,8 +504,11 @@ public class ContentService {
      * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
      */
     private void userAllowedToEditContent(ContentModel content) {
+        logger.debug("Checking if user is allowed to edit content with ID: {}", content.getContentId());
+
         // Check if the user is allowed to edit the course
         courseService.userAllowedToEditCourse(content.getCourse());
+        logger.debug("User is allowed to edit content with ID: {}", content.getContentId());
     }
 
     /**
@@ -447,15 +519,22 @@ public class ContentService {
      * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
      */
     private void userAllowedToEditContent(String contentId) {
+        logger.debug("Checking if user is allowed to edit content with ID: {}", contentId);
+
         // Get the content by ID
         ContentModel content = getContentById(contentId);
 
         // Check if the user is allowed to edit the content
         userAllowedToEditContent(content);
+        logger.debug("User is allowed to edit content with ID: {}", contentId);
     }
 
     private void userAllowedToAccessContent(ContentModel content) {
+        logger.debug("Checking if user is allowed to access content with ID: {}", content.getContentId());
+
         // Check if the user is allowed to access the course
         courseService.userAllowedToAccessCourse(content.getCourse());
+
+        logger.debug("User is allowed to access content with ID: {}", content.getContentId());
     }
 }

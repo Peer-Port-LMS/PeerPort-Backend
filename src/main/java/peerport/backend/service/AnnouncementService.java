@@ -22,9 +22,13 @@ import peerport.backend.model.CourseModel;
 import peerport.backend.model.FileModel;
 import peerport.backend.model.RoleModel.Role;
 import peerport.backend.model.UserModel;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 @Service
 public class AnnouncementService {
+    protected static final Logger logger = LogManager.getLogger();
+
 
     @Autowired
     private FileService fileService;
@@ -44,10 +48,6 @@ public class AnnouncementService {
     private long fileUploadSizeLimit;
 
 
-    AnnouncementService(FileService fileService) {
-        this.fileService = fileService;
-    }
-
     /**
      * Get all announcements
      * 
@@ -55,27 +55,39 @@ public class AnnouncementService {
      * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
      */
     public List<AnnouncementModel> getAllAnnouncements() {
+        logger.debug("Getting all announcements for current user");
+
         // Get the current users role
         UserModel user = authService.getCurrentUser();
+        if (user == null) {
+            throw new UserNotAuthenticatedException("User not authenticated");
+        }
         Role role = user.getRole();
+
+        // Start from all announcements in repository
+        List<AnnouncementModel> announcements = announcementsRepository.findAll();
 
         // If admin, return all announcements
         if (role == Role.ADMIN) {
-            return announcementsRepository.findAll();
+            logger.trace("User is admin, returning all announcements");
+            return announcements;
         }
 
-        // Get all the courses for the user 
-        // (Filtering is done in CourseService based on role)
-        List<CourseModel> courses = courseService.getAllCourses();
-
-        // Get all the announcements for those courses
-        List<AnnouncementModel> allAnnouncements = new ArrayList<>();
-        for (CourseModel course : courses) {
-            allAnnouncements.addAll(course.getAnnouncements());
+        // For all non-admin roles, allow announcements from user courses
+        List<AnnouncementModel> visibleAnnouncements = new ArrayList<>();
+        for (AnnouncementModel announcement : announcements) {
+            CourseModel course = announcement.getCourse();
+            boolean isEnrolled = user.getEnrollments() != null && user.getEnrollments().stream()
+                .anyMatch(enrollment -> enrollment.getCourse() != null && enrollment.getCourse().equals(course));
+            boolean isInstructor = course != null && course.getInstructors().contains(user);
+            if (course != null && (course.getUsers().contains(user) || isEnrolled || isInstructor)) {
+                visibleAnnouncements.add(announcement);
+            }
         }
 
         // Return the announcements
-        return allAnnouncements;
+        logger.debug("Returning {} announcements for user with role: {}", visibleAnnouncements.size(), role);
+        return visibleAnnouncements;
     }
 
     /**
@@ -85,14 +97,22 @@ public class AnnouncementService {
      * @return The AnnouncementModel
      * @throws AnnouncementNotFoundException if announcement not found (Handled in GlobalExceptionHandler)
      * @throws UserNotAuthorizedException if user is not authorized to access (Handled in GlobalExceptionHandler)
-     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler
+     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
      */
     public AnnouncementModel getAnnouncementById(String announcementId) {
+        logger.debug("Getting announcement with ID: {}", announcementId);
+
+        UserModel user = authService.getCurrentUser();
+        if (user == null) {
+            throw new UserNotAuthenticatedException("User not authenticated");
+        }
+
         // Get the announcement by ID
         Optional<AnnouncementModel> announcement = announcementsRepository.findById(announcementId);
 
         // Check if its empty
         if (announcement.isEmpty()) {
+            logger.warn("Announcement with ID: {} not found", announcementId);
             throw new AnnouncementNotFoundException(announcementId);
         }
 
@@ -101,6 +121,7 @@ public class AnnouncementService {
         userAllowedToAccessAnnouncement(announcementModel);
 
         // Return the announcement
+        logger.debug("Successfully retrieved announcement with ID: {}", announcementId);
         return announcementModel;
     }
 
@@ -116,8 +137,24 @@ public class AnnouncementService {
      */
     @Transactional
     public AnnouncementModel createAnnouncement(String courseId, AnnouncementModel announcement) {
+        logger.debug("Creating announcement for course ID: {}", courseId);
+
+        UserModel user = authService.getCurrentUser();
+        if (user == null) {
+            throw new UserNotAuthenticatedException("User not authenticated");
+        }
+
         // Get the course
-        CourseModel course = courseService.getCourseById(courseId);
+        final CourseModel course;
+        try {
+            course = courseService.getCourseById(courseId);
+        } catch (Exception exception) {
+            throw new CourseNotFoundException(courseId);
+        }
+
+        if (course == null) {
+            throw new UserNotAuthorizedException("User is not authorized to create announcements.");
+        }
 
         // Check if the user is allowed to edit the course
         courseService.userAllowedToEditCourse(course);
@@ -126,6 +163,7 @@ public class AnnouncementService {
         announcement.setCourse(course);
 
         // Save the announcement
+        logger.debug("Saving announcement with ID: {}", announcement.getAnnouncementId());
         return announcementsRepository.save(announcement);
     }
 
@@ -144,10 +182,12 @@ public class AnnouncementService {
      */
     @Transactional
     public AnnouncementModel createAnnouncement(String courseId, AnnouncementModel announcement, List<MultipartFile> files) throws IOException {
+        logger.debug("Creating announcement for course ID: {} with multipart/form-data", courseId);
+
         // Check files
         if (files != null) {
             for (MultipartFile file : files) {
-                if (file != null && file.getSize() > fileUploadSizeLimit) { // 5MB limit
+                if (file != null && file.getSize() > fileUploadSizeLimit) {
                     throw new FileSizeLimitExceededException("File size exceeds limit of " + fileUploadSizeLimit + " bytes.");
                 }
             }
@@ -158,13 +198,15 @@ public class AnnouncementService {
 
         // Save the files to the announcement
         if (files != null) {
+            logger.trace("Saving {} files for announcement with ID: {}", files.size(), savedAnnouncement.getAnnouncementId());
             List<FileModel> savedFiles = fileService.saveAnnouncementFiles(files, savedAnnouncement, courseId);
-            savedAnnouncement.getFiles().addAll(savedFiles);
-            announcementsRepository.save(savedAnnouncement);
+            announcement.getFiles().addAll(savedFiles);
+            announcementsRepository.save(announcement);
         }
 
         // Return the announcement with any attached files
-        return savedAnnouncement;
+        logger.debug("Successfully created announcement with ID: {}", savedAnnouncement.getAnnouncementId());
+        return announcement;
     }
 
     /**
@@ -179,6 +221,8 @@ public class AnnouncementService {
      */
     @Transactional
     public AnnouncementModel updateAnnouncement(String announcementId, AnnouncementModel updatedAnnouncement) {
+        logger.debug("Updating announcement with ID: {}", announcementId);
+
         // Get the announcement by ID
         AnnouncementModel announcement = getAnnouncementById(announcementId);
         
@@ -193,6 +237,7 @@ public class AnnouncementService {
         announcementsRepository.save(announcement);
 
         // Return the updated announcement
+        logger.debug("Successfully updated announcement with ID: {}", announcement.getAnnouncementId());
         return announcement;
     }
 
@@ -217,10 +262,12 @@ public class AnnouncementService {
         List<String> removeFileIds,
         Boolean replaceAll
     ) throws IOException {
+        logger.debug("Updating announcement with ID: {} with multipart/form-data", announcementId);
+
         // Check files
         if (files != null) {
             for (MultipartFile file : files) {
-                if (file != null && file.getSize() > fileUploadSizeLimit) { // 5MB limit
+                if (file != null && file.getSize() > fileUploadSizeLimit) {
                     throw new FileSizeLimitExceededException("File size exceeds limit of " + fileUploadSizeLimit + " bytes.");
                 }
             }
@@ -243,6 +290,7 @@ public class AnnouncementService {
         announcementsRepository.save(announcement);
 
         // Return the updated announcement
+        logger.debug("Successfully updated announcement with ID: {}", announcement.getAnnouncementId());
         return announcement;
     }
     
@@ -259,11 +307,14 @@ public class AnnouncementService {
      */
     @Transactional
     public AnnouncementModel patchAnnouncement(AnnouncementModel announcement, AnnouncementModel patchedAnnouncement) {
+        logger.debug("Patching announcement with ID: {}", announcement.getAnnouncementId());
+
         // Check if the user is allowed to edit the announcement
         userAllowedToEditAnnouncement(announcement);
 
         // Check if patchedAnnouncement is null
         if (patchedAnnouncement == null) {
+            logger.warn("Patched announcement is null returning original announcement with ID: {}.", announcement.getAnnouncementId());
             return announcement;
         }
 
@@ -279,6 +330,7 @@ public class AnnouncementService {
         announcementsRepository.save(announcement);
 
         // Return the updated announcement
+        logger.debug("Successfully patched announcement with ID: {}", announcement.getAnnouncementId());
         return announcement;
     }
 
@@ -294,10 +346,13 @@ public class AnnouncementService {
      */
     @Transactional
     public AnnouncementModel patchAnnouncement(String announcementId, AnnouncementModel patchedAnnouncement) {
+        logger.debug("Patching announcement with ID: {}", announcementId);
+
         // Get the announcement by ID
         AnnouncementModel announcement = getAnnouncementById(announcementId);
 
         // Return the updated announcement
+        logger.debug("Successfully patched announcement with ID: {}", announcement.getAnnouncementId());
         return patchAnnouncement(announcement, patchedAnnouncement);
     }
 
@@ -322,10 +377,12 @@ public class AnnouncementService {
         List<String> removeFileIds,
         Boolean replaceAll
     ) throws IOException {
+        logger.debug("Patching announcement with ID: {} with multipart/form-data", announcementId);
+
         // Check files
         if (files != null) {
             for (MultipartFile file : files) {
-                if (file != null && file.getSize() > fileUploadSizeLimit) { // 5MB limit
+                if (file != null && file.getSize() > fileUploadSizeLimit) {
                     throw new FileSizeLimitExceededException("File size exceeds limit of " + fileUploadSizeLimit + " bytes.");
                 }
             }
@@ -359,8 +416,10 @@ public class AnnouncementService {
         // This will also check if the announcement exists
         userAllowedToEditAnnouncement(announcementId);
 
+        AnnouncementModel announcement = getAnnouncementById(announcementId);
+
         // Delete the announcement
-        announcementsRepository.deleteById(announcementId);
+        announcementsRepository.deleteById(announcement.getAnnouncementId());
     }
 
 
@@ -373,16 +432,22 @@ public class AnnouncementService {
      * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
      */
     public void userAllowedToEditAnnouncement(AnnouncementModel announcement) {
-        // Get the current user
+        logger.debug("Checking if user is allowed to edit announcement with ID: {}", announcement.getAnnouncementId());
+
         UserModel currentUser = authService.getCurrentUser();
+        if (currentUser == null) {
+            throw new UserNotAuthenticatedException("User not authenticated");
+        }
 
-        // Check if the user is admin
-        if (currentUser.getRole() == Role.ADMIN) return;
+        if (currentUser.getRole() == Role.ADMIN) {
+            return;
+        }
 
-        // Check if the user is an instructor for the course
-        if (announcement.getCourse().getInstructors().contains(currentUser)) return;
+        CourseModel course = announcement.getCourse();
+        if (course != null && course.getInstructors().contains(currentUser)) {
+            return;
+        }
 
-        // If not, throw exception
         throw new UserNotAuthorizedException("User is not authorized to edit announcement with ID: " + announcement.getAnnouncementId());
     }
 
@@ -395,6 +460,8 @@ public class AnnouncementService {
      * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
      */
     public void userAllowedToEditAnnouncement(String announcementId) {
+        logger.debug("Checking if user is allowed to edit announcement with ID: {}", announcementId);
+
         // Get the announcement
         AnnouncementModel announcement = getAnnouncementById(announcementId);
 
@@ -403,8 +470,34 @@ public class AnnouncementService {
     }
 
 
+    /**
+     * Check if user is allowed to access announcement
+     * @param announcement - AnnouncementModel to check
+     * @throws UserNotAuthorizedException if user is not authorized to access (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
+     */
     private void userAllowedToAccessAnnouncement(AnnouncementModel announcement) {
-        courseService.userAllowedToAccessCourse(announcement.getCourse());
+        logger.debug("Checking if user is allowed to access announcement with ID: {}", announcement.getAnnouncementId());
+        UserModel currentUser = authService.getCurrentUser();
+        if (currentUser == null) {
+            throw new UserNotAuthenticatedException("User not authenticated");
+        }
+
+        if (currentUser.getRole() == Role.ADMIN) {
+            return;
+        }
+
+        CourseModel course = announcement.getCourse();
+        boolean isDirectCourseMember = course != null && course.getUsers().contains(currentUser);
+        boolean isInstructor = course != null && course.getInstructors().contains(currentUser);
+        boolean isEnrolled = currentUser.getEnrollments() != null && currentUser.getEnrollments().stream()
+            .anyMatch(enrollment -> enrollment.getCourse() != null && enrollment.getCourse().equals(course));
+
+        if (isDirectCourseMember || isInstructor || isEnrolled) {
+            return;
+        }
+
+        throw new UserNotAuthorizedException("User is not authorized to access announcement with ID: " + announcement.getAnnouncementId());
     }
 
 
@@ -423,6 +516,8 @@ public class AnnouncementService {
         List<String> removeFileIds,
         Boolean replaceAll
     ) throws IOException {
+        logger.debug("Applying file changes to announcement with ID: {}", announcement.getAnnouncementId());
+
         // Ensure collection exists
         if (announcement.getFiles() == null) {
             announcement.setFiles(new ArrayList<>());
@@ -430,15 +525,19 @@ public class AnnouncementService {
 
         // If replaceAll=true, delete everything first
         if (Boolean.TRUE.equals(replaceAll)) {
+            logger.trace("Removing all files for announcement with ID: {}", announcement.getAnnouncementId());
             for (FileModel existing : new ArrayList<>(announcement.getFiles())) {
                 fileService.deleteFile(existing);
             }
             announcement.getFiles().clear();
         } else if (removeFileIds != null) {
+            logger.trace("Removing files with IDs: {} for announcement with ID: {}", removeFileIds, announcement.getAnnouncementId());
             // Remove specific files
             List<FileModel> remaining = new ArrayList<>();
             for (FileModel existing : announcement.getFiles()) {
-                if (removeFileIds.contains(existing.getFileId())) {
+                String fileId = existing.getFileId();
+                boolean shouldRemove = fileId != null && removeFileIds.contains(fileId);
+                if (shouldRemove) {
                     fileService.deleteFile(existing);
                 } else {
                     remaining.add(existing);
@@ -449,6 +548,7 @@ public class AnnouncementService {
 
         // Add new files
         if (filesToAdd != null) {
+            logger.trace("Adding {} files to announcement with ID: {}", filesToAdd.size(), announcement.getAnnouncementId());
             List<FileModel> savedFiles = fileService.saveAnnouncementFiles(
                 filesToAdd,
                 announcement,

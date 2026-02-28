@@ -3,6 +3,8 @@ package peerport.backend.controllers;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -35,6 +37,7 @@ import tools.jackson.databind.ObjectMapper;
 @RestController
 @RequestMapping("/assignments")
 public class AssignmentController {
+    protected static final Logger logger = LogManager.getLogger();
     
 	@Autowired
 	private AssignmentService assignmentService;
@@ -50,6 +53,8 @@ public class AssignmentController {
 	 */
 	@GetMapping
 	public ResponseEntity<List<AssignmentWithCourseDTO>> getAllAssignments() {
+		logger.debug("Retrieving all assignments");
+
 		// Get all assignments
 		List<AssignmentModel> assignments = assignmentService.getAllAssignments();
 
@@ -59,6 +64,7 @@ public class AssignmentController {
 				.toList();
 		
 		// Return the list of DTOs
+		logger.debug("Successfully retrieved {} assignments", assignmentDTOs.size());
 		return ResponseEntity.ok(assignmentDTOs);
 	}
 
@@ -73,10 +79,13 @@ public class AssignmentController {
 	 */
 	@GetMapping("/{assignmentId}")
 	public ResponseEntity<AssignmentDTO> getAssignmentById(@PathVariable String assignmentId) {
+		logger.debug("Retrieving assignment with ID: {}", assignmentId);
+
 		// Get assignment by ID
 		AssignmentModel assignment = assignmentService.getAssignmentById(assignmentId);
 
 		// Convert assignment to DTO and return
+		logger.debug("Successfully retrieved assignment with ID: {}", assignmentId);
 		return ResponseEntity.ok(assignment.toDTO());
 	}
 
@@ -93,10 +102,13 @@ public class AssignmentController {
 	@PostMapping("/{courseId}")
 	@PreAuthorize("@authservice.hasAnyRole(@authservice.ADMIN, @authservice.INSTRUCTOR)")
 	public ResponseEntity<AssignmentDTO> createAssignment(@PathVariable String courseId, @Validated @RequestBody AssignmentModel assignment) {
+		logger.debug("Creating assignment for course ID: {}", courseId);
+
 		// Try to create the assignment
 		AssignmentModel savedAssignment = assignmentService.createAssignment(assignment, courseId);
 
 		// Return the created assignment with 201 status
+		logger.debug("Successfully created assignment with ID: {} for course ID: {}", savedAssignment.getAssignmentId(), courseId);
 		return ResponseEntity.status(HttpStatus.CREATED).body(savedAssignment.toDTO());
 	}
 
@@ -120,6 +132,8 @@ public class AssignmentController {
 			@RequestPart("assignment") String assignmentJson,
 			@RequestPart(value = "files", required = false) List<MultipartFile> files
 	) throws IOException {
+		logger.debug("Creating assignment for course ID: {} with multipart/form-data", courseId);
+
 		// Parse JSON to AssignmentModel
 		AssignmentModel assignment;
 		try {
@@ -135,6 +149,7 @@ public class AssignmentController {
 		AssignmentModel savedAssignment = assignmentService.createAssignment(assignment, courseId, files);
 		
 		// Return the created assignment with 201 status
+		logger.debug("Successfully created assignment with ID: {} for course ID: {}", savedAssignment.getAssignmentId(), courseId);
 		return ResponseEntity.status(HttpStatus.CREATED).body(savedAssignment.toDTO());
 	}
 
@@ -151,10 +166,13 @@ public class AssignmentController {
 	@PutMapping("/{assignmentId}")
 	@PreAuthorize("@authservice.hasAnyRole(@authservice.ADMIN, @authservice.INSTRUCTOR)")
 	public ResponseEntity<AssignmentDTO> updateAssignment(@PathVariable String assignmentId, @RequestBody AssignmentModel assignment) {
+		logger.debug("Updating assignment with ID: {}", assignmentId);
+
 		// Update the assignment
 		AssignmentModel updatedAssignment = assignmentService.updateAssignment(assignmentId, assignment);
 
 		// Return the updated assignment as DTO
+		logger.debug("Successfully updated assignment with ID: {}", assignmentId);
 		return ResponseEntity.ok(updatedAssignment.toDTO());
 	}
 
@@ -182,6 +200,8 @@ public class AssignmentController {
 			@RequestParam(value = "removeFileIds", required = false) List<String> removeFileIds,
 			@RequestParam(value = "replaceAll", required = false, defaultValue = "false") Boolean replaceAll
 	) throws IOException {
+		logger.debug("Updating assignment with ID: {} with multipart/form-data", assignmentId);
+
 		// Parse JSON to AssignmentModel
 		AssignmentModel assignment;
 		try {
@@ -197,6 +217,7 @@ public class AssignmentController {
 		AssignmentModel updatedAssignment = assignmentService.updateAssignment(assignmentId, assignment, files, removeFileIds, replaceAll);
 		
 		// Return the updated assignment as DTO
+		logger.debug("Successfully updated assignment with ID: {}", assignmentId);
 		return ResponseEntity.ok(updatedAssignment.toDTO());
 	}
 
@@ -213,10 +234,13 @@ public class AssignmentController {
 	@PatchMapping("/{assignmentId}")
 	@PreAuthorize("@authservice.hasAnyRole(@authservice.ADMIN, @authservice.INSTRUCTOR)")
 	public ResponseEntity<AssignmentDTO> patchAssignment(@PathVariable String assignmentId, @RequestBody AssignmentModel assignment) {
+		logger.debug("Patching assignment with ID: {}", assignmentId);
+
 		// Patch the assignment
 		AssignmentModel patchedAssignment = assignmentService.patchAssignment(assignmentId, assignment);
 
 		// Return the patched assignment as DTO
+		logger.debug("Successfully patched assignment with ID: {}", assignmentId);
 		return ResponseEntity.ok(patchedAssignment.toDTO());
 	}
 
@@ -244,6 +268,8 @@ public class AssignmentController {
 			@RequestParam(value = "removeFileIds", required = false) List<String> removeFileIds,
 			@RequestParam(value = "replaceAll", required = false, defaultValue = "false") Boolean replaceAll
 	) throws IOException {
+		logger.debug("Patching assignment with ID: {} with multipart/form-data", assignmentId);
+
 		// Parse JSON to AssignmentModel
 		AssignmentModel assignment;
 		try {
@@ -258,6 +284,7 @@ public class AssignmentController {
 		AssignmentModel patchedAssignment = assignmentService.patchAssignment(assignmentId, assignment, files, removeFileIds, replaceAll);
 		
 		// Return the patched assignment as DTO
+		logger.debug("Successfully patched assignment with ID: {}", assignmentId);
 		return ResponseEntity.ok(patchedAssignment.toDTO());
 	}
 
@@ -272,10 +299,13 @@ public class AssignmentController {
 	@DeleteMapping("/{assignmentId}")
 	@PreAuthorize("@authservice.hasAnyRole(@authservice.ADMIN, @authservice.INSTRUCTOR)")
 	public ResponseEntity<Void> deleteAssignment(@PathVariable String assignmentId) {
+		logger.debug("Deleting assignment with ID: {}", assignmentId);
+		
 		// Delete the assignment
 		assignmentService.deleteAssignment(assignmentId);
 		
 		// Return no content status
+		logger.debug("Successfully deleted assignment with ID: {}", assignmentId);
 		return ResponseEntity.noContent().build();
 	}
 }

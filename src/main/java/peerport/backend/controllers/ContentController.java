@@ -3,6 +3,8 @@ package peerport.backend.controllers;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -35,6 +37,7 @@ import tools.jackson.databind.ObjectMapper;
 @RestController
 @RequestMapping("/content")
 public class ContentController {
+    protected static final Logger logger = LogManager.getLogger();
     
     @Autowired
     private ContentService contentService;
@@ -49,10 +52,13 @@ public class ContentController {
      */
     @GetMapping
     public ResponseEntity<List<ContentWithChildrenDTO>> getAllContent() {
+        logger.debug("Retrieving all content");
+
         // Get structured content
         List<ContentWithChildrenDTO> contentList = contentService.getStructuredContent();
 
         // Return the content list
+        logger.debug("Successfully retrieved {} content items", contentList.size());
         return ResponseEntity.ok(contentList);
     }
 
@@ -64,20 +70,26 @@ public class ContentController {
      */
     @GetMapping("/{contentId}")
     public ResponseEntity<ContentWithAllDetailsDTO> getContentById(@PathVariable String contentId) {
+        logger.debug("Retrieving content with ID: {}", contentId);
+
         // Get the content
         ContentModel content = contentService.getContentById(contentId);
 
         // Return the content if found
+        logger.debug("Successfully retrieved content with ID: {}", contentId);
         return ResponseEntity.ok(content.toContentWithAllDetailsDTO());
     }
 
     @PostMapping("/{courseId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<ContentDTO> createContent(@PathVariable String courseId, @RequestBody ContentModel content) {
+        logger.debug("Creating content for course ID: {}", courseId);
+
         // Create the content
         ContentModel savedContent = contentService.createContent(content, courseId);
 
         // Return the created content
+        logger.debug("Successfully created content with ID: {} for course ID: {}", savedContent.getContentId(), courseId);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedContent.toDTO());
     }
 
@@ -88,6 +100,8 @@ public class ContentController {
         @RequestPart(value="content", required=false) String jsonContentFromForm,
         @RequestPart(value="files", required=false) List<MultipartFile> files
     ) throws IOException {
+        logger.debug("Creating content for course ID: {} with multipart/form-data", courseId);
+
         // Convert json to ContentModel object
         ContentModel contentFromForm;
         try {
@@ -110,6 +124,7 @@ public class ContentController {
         ContentModel savedContent = contentService.createContent(contentFromForm, courseId, files);
 
         // Return the created content
+        logger.debug("Successfully created content with ID: {} for course ID: {}", savedContent.getContentId(), courseId);
         return ResponseEntity.status(HttpStatus.CREATED).body(savedContent.toDTO());
     }
 
@@ -126,10 +141,13 @@ public class ContentController {
     @PutMapping("/{contentId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<ContentDTO> updateContent(@PathVariable String contentId, @RequestBody ContentModel content) {
+        logger.debug("Updating content with ID: {}", contentId);
+
         // Update the content
         ContentModel updatedContent = contentService.updateContent(contentId, content);
 
         // Return the DTO
+        logger.debug("Successfully updated content with ID: {}", contentId);
         return ResponseEntity.ok(updatedContent.toDTO());
     }
 
@@ -157,6 +175,8 @@ public class ContentController {
         @RequestPart(value="removeFileIds", required=false) List<String> removeFileIds,
         @RequestPart(value="replaceAll", required=false) Boolean replaceAll
     ) throws IOException {
+        logger.debug("Updating content with ID: {} with multipart/form-data", contentId);
+
         // Convert json to ContentModel object
         ContentModel contentFromForm;
         try {
@@ -176,6 +196,7 @@ public class ContentController {
         ContentModel updated = contentService.updateContent(contentId, contentFromForm, files, removeFileIds, replaceAll);
 
         // Return the DTO
+        logger.debug("Successfully updated content with ID: {}", contentId);
         return ResponseEntity.ok(updated.toDTO());
     }
 
@@ -192,10 +213,13 @@ public class ContentController {
     @PatchMapping("/{contentId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<ContentDTO> patchContent(@PathVariable String contentId, @RequestBody ContentModel content) {
+        logger.debug("Patching content with ID: {}", contentId);
+
         // Patch the content
         ContentModel patchedContent = contentService.patchContent(contentId, content);
 
         // Return the DTO
+        logger.debug("Successfully patched content with ID: {}", contentId);
         return ResponseEntity.ok(patchedContent.toDTO());
     }
 
@@ -219,6 +243,8 @@ public class ContentController {
         @RequestPart(value="content", required=false) String jsonContentFromForm,
         @RequestPart(value="files", required=false) List<MultipartFile> files
     ) throws IOException {
+        logger.debug("Patching content with ID: {} with multipart/form-data", contentId);
+
         // Convert json to ContentModel object
         ContentModel contentFromForm;
         try {
@@ -240,6 +266,7 @@ public class ContentController {
         ContentModel content = contentService.patchContent(contentId, contentFromForm, files);
 
         // Return the DTO
+        logger.debug("Successfully patched content with ID: {}", contentId);
         return ResponseEntity.ok(content.toDTO());
     }
 
@@ -252,10 +279,13 @@ public class ContentController {
     @DeleteMapping("/{contentId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<Void> deleteContent(@PathVariable String contentId) {
+        logger.debug("Deleting content with ID: {}", contentId);
+        
         // Delete the content
         contentService.deleteContent(contentId);
 
         // Return no content response
+        logger.debug("Successfully deleted content with ID: {}", contentId);
         return ResponseEntity.noContent().build();
     }
 }

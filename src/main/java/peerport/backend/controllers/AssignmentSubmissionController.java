@@ -1,5 +1,7 @@
 package peerport.backend.controllers;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,6 +32,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 @RestController
 @RequestMapping("/submissions/assignments")
 public class AssignmentSubmissionController {
+    protected static final Logger logger = LogManager.getLogger();
 
     @Autowired
     private AssignmentSubmissionService assignmentSubmissionService;
@@ -44,6 +47,8 @@ public class AssignmentSubmissionController {
      */
     @GetMapping
     public ResponseEntity<List<AssignmentSubmissionDTO>> getAllAssignmentSubmissions() {
+        logger.debug("Retrieving all assignment submissions");
+
         // Get all the assignment submissions
         List<AssignmentSubmissionModel> submissions = assignmentSubmissionService.getAllAssignmentSubmissions(); 
 
@@ -54,6 +59,7 @@ public class AssignmentSubmissionController {
         }
 
         // Return the list of submissions
+        logger.debug("Successfully retrieved {} assignment submissions", submissionDTOs.size());
         return ResponseEntity.ok(submissionDTOs);
     }
     
@@ -69,10 +75,13 @@ public class AssignmentSubmissionController {
      */
     @GetMapping("/{assignmentSubmissionId}")
     public ResponseEntity<AssignmentSubmissionWithDetailsDTO> getAssignmentSubmissionById(@PathVariable String assignmentSubmissionId) {
+        logger.debug("Retrieving assignment submission with ID: {}", assignmentSubmissionId);
+
         // Get the assignment submission by ID
         AssignmentSubmissionModel submission = assignmentSubmissionService.getSubmissionById(assignmentSubmissionId);
 
         // Convert to a DTO and return
+        logger.debug("Successfully retrieved assignment submission with ID: {}", assignmentSubmissionId);
         return ResponseEntity.ok(submission.toWithDetailsDTO());
     }
 
@@ -89,10 +98,13 @@ public class AssignmentSubmissionController {
      */
     @PostMapping("/{assignmentId}")
     public ResponseEntity<AssignmentSubmissionDTO> createSubmission(@PathVariable String assignmentId, @RequestBody AssignmentSubmissionModel submissionData) {
+        logger.debug("Creating assignment submission for assignment ID: {}", assignmentId);
+
         // Create the assignment submission
         AssignmentSubmissionModel submission = assignmentSubmissionService.createAssignmentSubmission(submissionData, assignmentId);
 
         // Convert to DTO and return
+        logger.debug("Successfully created assignment submission with ID: {}", submission.getAssignmentSubmissionId());
         return ResponseEntity.status(HttpStatus.CREATED).body(submission.toDTO());
     }
 
@@ -116,10 +128,13 @@ public class AssignmentSubmissionController {
         @RequestPart(value="submission", required=true) AssignmentSubmissionModel submissionData,
         @RequestPart(value="files", required=false) List<MultipartFile> files
     ) throws IOException {
+        logger.debug("Creating assignment submission for assignment ID: {} with multipart/form-data", assignmentId);
+
         // Create the assignment submission
         AssignmentSubmissionModel submission = assignmentSubmissionService.createAssignmentSubmission(submissionData, assignmentId, files);
 
         // Convert to DTO and return
+        logger.debug("Successfully created assignment submission with ID: {}", submission.getAssignmentSubmissionId());
         return ResponseEntity.status(HttpStatus.CREATED).body(submission.toDTO());
     }
 
@@ -135,10 +150,13 @@ public class AssignmentSubmissionController {
      */
     @DeleteMapping("/{assignmentSubmissionId}")
     public ResponseEntity<Void> deleteAssignmentSubmission(@PathVariable String assignmentSubmissionId) {
+        logger.debug("Deleting assignment submission with ID: {}", assignmentSubmissionId);
+        
         // Delete the assignment submission
         assignmentSubmissionService.deleteAssignmentSubmissionById(assignmentSubmissionId);
 
         // Return no content
+        logger.debug("Successfully deleted assignment submission with ID: {}", assignmentSubmissionId);
         return ResponseEntity.noContent().build();
     }
 }

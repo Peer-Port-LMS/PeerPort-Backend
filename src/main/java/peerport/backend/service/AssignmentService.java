@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -28,6 +30,7 @@ import peerport.backend.model.RoleModel.Role;
 
 @Service
 public class AssignmentService {
+    protected static final Logger logger = LogManager.getLogger();
     
     @Autowired
     private AuthService authService;
@@ -54,14 +57,22 @@ public class AssignmentService {
      * @throws FailedToParseFormDataException if validation fails
      */
     public void validateAssignment(AssignmentModel assignment) {
+        logger.debug("Validating assignment model: {}", assignment);
+
         Set<ConstraintViolation<AssignmentModel>> violations = validator.validate(assignment);
         if (!violations.isEmpty()) {
+            logger.trace("Validation failed for assignment model: {}. Violations: {}", assignment, violations);
+
             StringBuilder errorMsg = new StringBuilder("Validation failed: ");
             for (ConstraintViolation<AssignmentModel> violation : violations) {
                 errorMsg.append(violation.getPropertyPath()).append(" ").append(violation.getMessage()).append("; ");
             }
+
+            logger.warn("Assignment model validation failed: {}", errorMsg.toString());
             throw new FailedToParseFormDataException(errorMsg.toString());
         }
+
+        logger.debug("Assignment model validation passed: {}", assignment);
     }
 
     /**
@@ -72,11 +83,14 @@ public class AssignmentService {
      * @throws UserNotAuthorizedException if user is not authorized to view (Handled in GlobalExceptionHandler)
      */
     public List<AssignmentModel> getAllAssignments() {
+        logger.debug("Getting all assignments for current user.");
+
         // Get the users role
         UserModel user = authService.getCurrentUser();
 
         // Check user role
         if (user.getRole() == Role.ADMIN) {
+            logger.debug("User is admin, returning all assignments.");
             return assignmentRepository.findAll();
         }
 
@@ -90,6 +104,7 @@ public class AssignmentService {
         }
 
         // Return the assignments
+        logger.debug("Returning {} assignments for user ID: {}", assignments.size(), user.getUserId());
         return assignments;
     }
 
@@ -101,11 +116,14 @@ public class AssignmentService {
      * @throws AssignmentNotFoundException if assignment not found (Handled in GlobalExceptionHandler)
      */
     public AssignmentModel getAssignmentById(String assignmentId) {
+        logger.debug("Getting assignment by ID: {}", assignmentId);
+
         // Get the assignment by ID
         Optional<AssignmentModel> assignment = assignmentRepository.findById(assignmentId);
 
         // Check if the assignment exists or not
         if (assignment.isEmpty()) {
+            logger.warn("Assignment not found with ID: {}", assignmentId);
             throw new AssignmentNotFoundException(assignmentId);
         }
 
@@ -114,6 +132,7 @@ public class AssignmentService {
         userAllowedToAccessAssignment(assignmentModel);
 
         // Return the assignment
+        logger.debug("Returning assignment with ID: {}", assignmentId);
         return assignmentModel;
     }
 
@@ -129,6 +148,8 @@ public class AssignmentService {
      */
     @Transactional
     public AssignmentModel createAssignment(AssignmentModel assignment, String courseId) {
+        logger.debug("Creating new assignment for course ID: {}. Assignment details: {}", courseId, assignment);
+
         // Get the course by ID
         CourseModel course = courseService.getCourseById(courseId);
 
@@ -139,6 +160,7 @@ public class AssignmentService {
         assignment.setCourse(course);
 
         // Return saved assignment
+        logger.debug("Saving new assignment for course ID: {}. Assignment details: {}", courseId, assignment);
         return assignmentRepository.save(assignment);
     }
 
@@ -157,6 +179,8 @@ public class AssignmentService {
      */
     @Transactional
     public AssignmentModel createAssignment(AssignmentModel assignment, String courseId, List<MultipartFile> files) throws IOException {
+        logger.debug("Creating new assignment with files for course ID: {}. Assignment details: {}. Number of files: {}", courseId, assignment, files != null ? files.size() : 0);
+
         // Validate file sizes
         if (files != null) {
             for (MultipartFile file : files) {
@@ -180,12 +204,15 @@ public class AssignmentService {
         
         // Add files if provided
         if (files != null && !files.isEmpty()) {
+            logger.trace("Saving {} files for assignment ID: {}.", files.size(), savedAssignment.getAssignmentId());
             List<FileModel> savedFiles = fileService.saveAssignmentFiles(files, savedAssignment, courseId);
             savedAssignment.getFiles().addAll(savedFiles);
             savedAssignment = assignmentRepository.save(savedAssignment);
+            logger.trace("Files saved and linked to assignment ID: {}.", savedAssignment.getAssignmentId());
         }
         
         // Return saved assignment
+        logger.debug("Created new assignment with ID: {} for course ID: {}.", savedAssignment.getAssignmentId(), courseId);
         return savedAssignment;
     }
 
@@ -201,6 +228,8 @@ public class AssignmentService {
      */
     @Transactional
     public AssignmentModel updateAssignment(String assignmentId, AssignmentModel updatedAssignment) {
+        logger.debug("Updating assignment with ID: {}. Updated details: {}", assignmentId, updatedAssignment);
+
         // Get the assignment
         AssignmentModel assignment = getAssignmentById(assignmentId);
 
@@ -215,6 +244,7 @@ public class AssignmentService {
         assignment.setDateUpdated(updatedAssignment.getDateUpdated());
 
         // Return the assignment
+        logger.debug("Saving updated assignment with ID: {}. Updated details: {}", assignmentId, assignment);
         return assignmentRepository.save(assignment);
     }
 
@@ -241,6 +271,14 @@ public class AssignmentService {
         List<String> removeFileIds,
         Boolean replaceAll
     ) throws IOException {
+        logger.debug("Updating assignment with ID: {} with file changes. Updated details: {}. Number of files to add: {}. Number of files to remove: {}. Replace all files: {}", 
+            assignmentId, 
+            updatedAssignment, 
+            files != null ? files.size() : 0, 
+            removeFileIds != null ? removeFileIds.size() : 0, 
+            replaceAll != null ? replaceAll : false
+        );
+
         // Validate file sizes
         if (files != null) {
             for (MultipartFile file : files) {
@@ -266,6 +304,7 @@ public class AssignmentService {
         assignment.setDueDate(updatedAssignment.getDueDate());
         
         // Return the saved assignment
+        logger.debug("Saving updated assignment with ID: {} after applying file changes. Updated details: {}", assignmentId, assignment);
         return assignmentRepository.save(assignment);
     }
 
@@ -281,6 +320,8 @@ public class AssignmentService {
      */
     @Transactional
     public AssignmentModel patchAssignment(String assignmentId, AssignmentModel updatedFields) {
+        logger.debug("Patching assignment with ID: {}. Updated fields: {}", assignmentId, updatedFields);
+
         // Get the existing assignment
         AssignmentModel assignment = getAssignmentById(assignmentId);
 
@@ -308,6 +349,7 @@ public class AssignmentService {
         }
 
         // Save and return the updated assignment
+        logger.debug("Saving patched assignment with ID: {}. Patched details: {}", assignmentId, assignment);
         return assignmentRepository.save(assignment);
     }
 
@@ -334,6 +376,14 @@ public class AssignmentService {
         List<String> removeFileIds,
         Boolean replaceAll
     ) throws IOException {
+        logger.debug("Patching assignment with ID: {} with file changes. Updated fields: {}. Number of files to add: {}. Number of files to remove: {}. Replace all files: {}", 
+            assignmentId, 
+            updatedFields, 
+            files != null ? files.size() : 0, 
+            removeFileIds != null ? removeFileIds.size() : 0, 
+            replaceAll != null ? replaceAll : false
+        );
+        
         // Validate file sizes
         if (files != null) {
             for (MultipartFile file : files) {
@@ -353,6 +403,7 @@ public class AssignmentService {
         applyFileChanges(assignment, files, removeFileIds, replaceAll);
         
         // Save and return the updated assignment
+        logger.debug("Saving patched assignment with ID: {} after applying file changes. Patched details: {}", assignmentId, assignment);
         return patchAssignment(assignmentId, updatedFields);
     }
 
@@ -366,10 +417,13 @@ public class AssignmentService {
      */
     @Transactional
     public void deleteAssignment(String assignmentId) {
+        logger.debug("Deleting assignment with ID: {}", assignmentId);
+
         // Check if the user is authorized to delete the assignment
         userAllowedToEditAssignment(assignmentId);
 
         // Delete the assignment by ID
+        logger.debug("Deleting assignment with ID: {} from repository.", assignmentId);
         assignmentRepository.deleteById(assignmentId);
     }
 
@@ -383,8 +437,11 @@ public class AssignmentService {
      * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
      */
     private void userAllowedToEditAssignment(AssignmentModel assignment) {
+        logger.debug("Checking if user is allowed to edit assignment with ID: {}.", assignment.getAssignmentId());
+
         // Check if user is allowed to edit the assignment
         courseService.userAllowedToEditCourse(assignment.getCourse());
+        logger.debug("User is allowed to edit assignment with ID: {}.", assignment.getAssignmentId());
     }
 
     /**
@@ -396,16 +453,22 @@ public class AssignmentService {
      * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler)
      */
     private void userAllowedToEditAssignment(String assignmentId) {
+        logger.debug("Checking if user is allowed to edit assignment with ID: {}.", assignmentId);
+
         // Get the assignment by ID
         AssignmentModel assignment = getAssignmentById(assignmentId);
 
         // Check if user is allowed to edit the assignment
         userAllowedToEditAssignment(assignment);
+        logger.debug("User is allowed to edit assignment with ID: {}.", assignmentId);
     }
 
     private void userAllowedToAccessAssignment(AssignmentModel assingment) {
+        logger.debug("Checking if user is allowed to access assignment with ID: {}.", assingment.getAssignmentId());
+
         // Check if user is allowed to access the assignment
         courseService.userAllowedToAccessCourse(assingment.getCourse());
+        logger.debug("User is allowed to access assignment with ID: {}.", assingment.getAssignmentId());
     }
 
     /**
@@ -423,6 +486,13 @@ public class AssignmentService {
         List<String> removeFileIds,
         Boolean replaceAll
     ) throws IOException {
+        logger.debug("Applying file changes to assignment with ID: {}. Number of files to add: {}. Number of files to remove: {}. Replace all files: {}", 
+            assignment.getAssignmentId(), 
+            filesToAdd != null ? filesToAdd.size() : 0, 
+            removeFileIds != null ? removeFileIds.size() : 0, 
+            replaceAll != null ? replaceAll : false
+        );
+
         // Ensure collection exists
         if (assignment.getFiles() == null) {
             assignment.setFiles(new ArrayList<>());
@@ -430,16 +500,22 @@ public class AssignmentService {
         
         // Handle replace all
         if (replaceAll != null && replaceAll) {
+            logger.trace("Replace all is true, removing all existing files for assignment ID: {}.", assignment.getAssignmentId());
+
             // Delete all existing files
             List<FileModel> filesToDelete = new ArrayList<>(assignment.getFiles());
             for (FileModel file : filesToDelete) {
                 fileService.deleteFile(file);
             }
             assignment.getFiles().clear();
+
+            logger.trace("All existing files removed for assignment ID: {}.", assignment.getAssignmentId());
         }
         
         // Handle selective removal
         if (removeFileIds != null && !removeFileIds.isEmpty()) {
+            logger.trace("Removing specified files from assignment ID: {}. File IDs to remove: {}", assignment.getAssignmentId(), removeFileIds);
+
             List<FileModel> filesToRemove = assignment.getFiles().stream()
                 .filter(file -> removeFileIds.contains(file.getFileId()))
                 .toList();
@@ -448,16 +524,22 @@ public class AssignmentService {
                 assignment.getFiles().remove(file);
                 fileService.deleteFile(file);
             }
+
+            logger.trace("Specified files removed from assignment ID: {}. File IDs removed: {}", assignment.getAssignmentId(), removeFileIds);
         }
         
         // Add new files
         if (filesToAdd != null && !filesToAdd.isEmpty()) {
+            logger.trace("Adding new files to assignment ID: {}. Number of files to add: {}", assignment.getAssignmentId(), filesToAdd.size());
             List<FileModel> newFiles = fileService.saveAssignmentFiles(
                 filesToAdd,
                 assignment,
                 assignment.getCourse().getCourseId()
             );
             assignment.getFiles().addAll(newFiles);
+            logger.trace("New files added to assignment ID: {}. Number of files added: {}", assignment.getAssignmentId(), newFiles.size());
         }
+
+        logger.debug("File changes applied to assignment with ID: {}.", assignment.getAssignmentId());
     }
 }

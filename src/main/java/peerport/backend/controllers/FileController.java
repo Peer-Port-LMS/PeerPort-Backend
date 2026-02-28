@@ -7,6 +7,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
@@ -24,6 +26,7 @@ import peerport.backend.service.FileService;
 @RestController
 @RequestMapping("/files")
 public class FileController {
+    protected static final Logger logger = LogManager.getLogger();
     
     @Autowired
     private FileService fileService;
@@ -31,6 +34,8 @@ public class FileController {
     
     @GetMapping("/{fileId}")
     public ResponseEntity<Resource> getFileById(@PathVariable String fileId) throws FileNotFoundException, MalformedURLException, IOException {
+        logger.debug("Retrieving file with ID: {}", fileId);
+        
         // Get the file from the database and perform authorization checks
         FileModel fileModel = fileService.getFileById(fileId);
 
@@ -40,6 +45,7 @@ public class FileController {
 
         // Check if the resource exists and is readable
         if (!resource.exists() || !resource.isReadable()) {
+            logger.info("File resource not found or unreadable for ID: {}", fileId);
             return ResponseEntity.notFound().build();
         }
 
@@ -53,6 +59,7 @@ public class FileController {
         }
 
         // Return the file as a response entity
+        logger.debug("Successfully retrieved file with ID: {}", fileId);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + fileModel.getFileName() + "\"")

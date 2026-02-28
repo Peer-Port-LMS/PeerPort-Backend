@@ -5,6 +5,8 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,6 +28,7 @@ import peerport.backend.model.RoleModel.Role;
  */
 @Service
 public class AuthService extends DefaultOAuth2UserService {
+    protected static final Logger logger = LogManager.getLogger();
 
     public static final Role STUDENT = Role.STUDENT;
     public static final Role INSTRUCTOR = Role.INSTRUCTOR;
@@ -44,6 +47,7 @@ public class AuthService extends DefaultOAuth2UserService {
      */
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException {
+        logger.debug("Loading user from OAuth2 provider: {}", userRequest.getClientRegistration().getRegistrationId());
         OAuth2User oauth2User = super.loadUser(userRequest);
 
         // Extract user info from OAuth2 provider
@@ -65,11 +69,15 @@ public class AuthService extends DefaultOAuth2UserService {
         // GITHUB specific handling
         final String profilePictureUrl;
         if (provider.equals("github")) {
+            logger.trace("Handling GitHub OAuth2 user, extracting email, name, and avatar_url");
             email = oauth2User.getAttribute("email");
             name = oauth2User.getAttribute("name");
             profilePictureUrl = oauth2User.getAttribute("avatar_url");
+            logger.trace("Extracted email: {}, name: {}, avatar_url: {}", email, name, profilePictureUrl);
         } else {
+            logger.trace("Handling non-GitHub OAuth2 user, extracting email, name, and picture");
             profilePictureUrl = oauth2User.getAttribute("picture");
+            logger.trace("Extracted email: {}, name: {}, picture: {}", email, name, profilePictureUrl);
         }
 
         // Save or update user in the database
@@ -87,10 +95,12 @@ public class AuthService extends DefaultOAuth2UserService {
 
         // Default role is STUDENT
         if (user.getRole() == null) {
+            logger.trace("Setting default role for new user with email: {} to STUDENT", email);
             user.setRole(Role.ADMIN); // Change to Role.STUDENT in production
         }
         userRepository.save(user);
 
+        logger.debug("User with email: {} loaded and saved/updated in the database with role: {}", email, user.getRole());
         return oauth2User;
     }
 
@@ -103,9 +113,14 @@ public class AuthService extends DefaultOAuth2UserService {
      * @return True if the user has the role, false otherwise
      */
     public boolean hasRole(Role role) {
+        logger.debug("Checking if user has role: {}", role);
+
         UserModel user = getCurrentUser();
-        return user.getRole() != null &&
+        Boolean hasRole = user.getRole() != null &&
             user.getRole().equals(role);
+        
+        logger.debug("User has role: {}", hasRole);
+        return hasRole;
     }
 
     /**
@@ -115,10 +130,15 @@ public class AuthService extends DefaultOAuth2UserService {
      * @return True if the user has any of the roles, false otherwise
      */
     public boolean hasAnyRole(Role... roles) {
+        logger.debug("Checking if user has any of the roles: {}", Arrays.toString(roles));
+
         Set<Role> allowed = new HashSet<>(Arrays.asList(roles));
         UserModel user = getCurrentUser();
-        return user.getRole() != null &&
+        Boolean hasAnyRole = user.getRole() != null &&
             allowed.contains(user.getRole());
+        
+        logger.debug("User has any of the roles: {}", hasAnyRole);
+        return hasAnyRole;
     }
 
 
@@ -131,17 +151,22 @@ public class AuthService extends DefaultOAuth2UserService {
      * @throws UserNotFoundException If the user is not found in the database (Handled in GlobalExceptionHandler)
      */
     public UserModel getCurrentUser() {
+        logger.debug("Retrieving current authenticated user");
+
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         // Check if the user is authenticated and is an OAuth2User
         if (!(auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof OAuth2User oauth)) {
+            logger.warn("User is not authenticated or principal is not an OAuth2User");
             throw new UserNotAuthenticatedException("User not authenticated");
         }
 
         // Check by email
         String email = oauth.getAttribute("email");
         if (email != null) {
+            logger.trace("Looking up user by email: {}", email);
             Optional<UserModel> user = userRepository.findByEmail(email);
             if (user.isPresent()) {
+                logger.debug("User found by email: {}", email);
                 return user.get();
             }
         }
@@ -150,15 +175,20 @@ public class AuthService extends DefaultOAuth2UserService {
         String providerId = attr(oauth, "sub", "id");
         String provider = auth instanceof OAuth2AuthenticationToken t ? t.getAuthorizedClientRegistrationId() : null;
         if (provider != null && providerId != null) {
+            logger.trace("Looking up user by provider: {} and providerId: {}", provider, providerId);
+
             Optional<UserModel> user = userRepository.findByProviderAndProviderId(provider, providerId);
             if (user.isPresent()) {
+                logger.debug("User found by provider: {} and providerId: {}", provider, providerId);
                 return user.get();
             }
         }
 
         if (email != null) {
+            logger.warn("User not found with email: {} or provider: {}", email, provider);
             throw new UserNotFoundException("User not found with email: " + email + " or provider: " + provider);
         } else {
+            logger.warn("User not found with provider: {}", provider);
             throw new UserNotFoundException("User not found with provider: " + provider);
         }
     }
@@ -173,10 +203,17 @@ public class AuthService extends DefaultOAuth2UserService {
      * @return The attribute value as a String, or null if not found
      */
     private String attr(OAuth2User oauth, String... keys) {
+        logger.trace("Attempting to retrieve attribute from OAuth2User using keys: {}", Arrays.toString(keys));
+
         for (String k : keys) {
             Object v = oauth.getAttribute(k);
-            if (v != null) return v.toString();
+            if (v != null) {
+                logger.trace("Found attribute '{}' with value '{}'", k, v);
+                return v.toString();
+            }
         }
+
+        logger.trace("Attribute not found in OAuth2User for keys: {}", Arrays.toString(keys));
         return null;
     }
 }

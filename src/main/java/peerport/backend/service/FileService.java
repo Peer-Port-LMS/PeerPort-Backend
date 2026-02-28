@@ -17,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.transaction.Transactional;
 import peerport.backend.database.FilesRepository;
 import peerport.backend.model.ContentModel;
+import peerport.backend.exceptions.files.FileSizeLimitExceededException;
 import peerport.backend.exceptions.files.InvalidFileTypeException;
 import peerport.backend.model.AnnouncementModel;
 import peerport.backend.model.AssignmentModel;
@@ -24,12 +25,16 @@ import peerport.backend.model.AssignmentSubmissionModel;
 import peerport.backend.model.FileModel;
 import peerport.backend.model.UserModel;
 import peerport.backend.model.RoleModel.Role;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 /**
  * Service for handling file and FileModel operations
  */
 @Service
 public class FileService {
+    protected static final Logger logger = LogManager.getLogger();
 
     @Autowired
     private FilesRepository filesRepository;
@@ -42,13 +47,19 @@ public class FileService {
     private String uploadDir;
     private String coursesDir = "courses";
 
+    @Value("${file.upload-size-limit}")
+    private long fileUploadSizeLimit;
+
     // Regular functions
     public FileModel getFileById(String fileId) throws FileNotFoundException {
+        logger.debug("Attempting to retrieve file with ID: {}", fileId);
+
         // Get the file by ID
         Optional<FileModel> fileOpt = filesRepository.findById(fileId);
 
         // Check if the file exists
         if (fileOpt.isEmpty()) {
+            logger.warn("File with ID: {} not found", fileId);
             throw new FileNotFoundException(fileId);
         }
 
@@ -60,37 +71,46 @@ public class FileService {
         Role userRole = currentUser.getRole();
 
         // If admin allow access
-        if (userRole == Role.ADMIN) return file;
+        if (userRole == Role.ADMIN) {
+            logger.debug("User with ID: {} is an admin, granting access to file with ID: {}", currentUser.getUserId(), fileId);
+            return file;
+        }
 
         // Check if user is allowed to access the file
         if (file.getCourse() != null) {
             // Check if the user is enrolled in the course
             if (file.getCourse().getUsers().contains(currentUser)) {
+                logger.debug("User with ID: {} is enrolled in course with ID: {}, granting access to file with ID: {}", currentUser.getUserId(), file.getCourse().getCourseId(), fileId);
                 return file;
             }
         } else if (file.getContent() != null) {
             // Check if the user is allowed to access the content
             if (file.getContent().getCourse().getUsers().contains(currentUser)) {
+                logger.debug("User with ID: {} is allowed to access content with ID: {}, granting access to file with ID: {}", currentUser.getUserId(), file.getContent().getContentId(), fileId);
                 return file;
             }
         } else if (file.getAnnouncement() != null) {
             // Check if the user is allowed to access the announcement
             if (file.getAnnouncement().getCourse().getUsers().contains(currentUser)) {
+                logger.debug("User with ID: {} is allowed to access announcement with ID: {}, granting access to file with ID: {}", currentUser.getUserId(), file.getAnnouncement().getAnnouncementId(), fileId);
                 return file;
             }
         } else if (file.getAssignmentSubmission() != null) {
             // Check if the user is an instructor of the course
             if (userRole == Role.INSTRUCTOR && file.getAssignmentSubmission().getAssignment().getCourse().getInstructors().contains(currentUser)) {
+                logger.debug("User with ID: {} is an instructor for course with ID: {}, granting access to file with ID: {}", currentUser.getUserId(), file.getAssignmentSubmission().getAssignment().getCourse().getCourseId(), fileId);
                 return file;
             }
 
             // Check if the user is allowed to access the assignment submission
             if (file.getAssignmentSubmission().getUser().getUserId().equals(currentUser.getUserId())) {
+                logger.debug("User with ID: {} is the owner of assignment submission with ID: {}, granting access to file with ID: {}", currentUser.getUserId(), file.getAssignmentSubmission().getAssignmentSubmissionId(), fileId);
                 return file;
             }
         }
 
         // File is not associated with any entity
+        logger.warn("File with ID: {} is not associated with any entity or user does not have access", fileId);
         throw new FileNotFoundException("File with ID: " + fileId + " is not associated with any entity.");
     }
 
@@ -104,6 +124,8 @@ public class FileService {
      */
     @Transactional
     public List<FileModel> saveContentFiles(List<MultipartFile> files, ContentModel content, String courseId) throws IOException {
+        logger.debug("Saving {} files for content with ID: {}", files.size(), content.getContentId());
+
         List<FileModel> savedFiles = new ArrayList<>();
 
         long baseTimestamp = System.currentTimeMillis();
@@ -111,9 +133,11 @@ public class FileService {
         
         for (MultipartFile file : files) {
             if (file == null || file.isEmpty()) {
+                logger.trace("Skipping empty file for content with ID: {}", content.getContentId());
                 continue;
             }
 
+            // Get the file extension
             String fileExtension = getFileExtension(file.getOriginalFilename());
             String fileName = String.format("content_%s_%d_%d%s",
                 content.getContentId(),
@@ -122,27 +146,61 @@ public class FileService {
                 fileExtension.isEmpty() ? "" : "." + fileExtension
             );
 
+            // Get the content type
             String contentType = file.getContentType();
             if (contentType == null) {
+                logger.warn("Content type is null for file: {}, defaulting to application/octet-stream", file.getOriginalFilename());
                 contentType = "application/octet-stream";
             }
 
+            // Save the file
             String savedFilePath = saveFile(
                 file,
                 this.uploadDir + "/" + this.coursesDir + "/" + courseId + "/content/" + content.getContentId() + "/" + fileName
             );
 
+            // Create the new FileModel
             FileModel newFile = new FileModel(fileName, savedFilePath, fileExtension, contentType);
             newFile.setContent(content);
 
+            // Save the file model to the database
             FileModel savedFile = filesRepository.save(newFile);
             savedFiles.add(savedFile);
             fileCounter++;
         }
 
+        // Return the saved files
+        logger.debug("Successfully saved {} files for content with ID: {}", savedFiles.size(), content.getContentId());
         return savedFiles;
     }
 
+
+    /**
+     * Checks if any of the files exceed the file size limit and throws an exception if they do
+     * @param files - The list of files to check
+     * @throws FileSizeLimitExceededException If any of the files exceed the file size limit
+     */
+    public void checkFileSizes(List<MultipartFile> files) throws FileSizeLimitExceededException {
+        // If files is null, skip the check
+        if (files != null) {
+            // Check each file size against the limit
+            for (MultipartFile file : files) {
+                checkFileSize(file);
+            }
+        }
+    }
+
+    /**
+     * Checks if a file exceeds the file size limit and throws an exception if it does
+     * @param file - The file to check
+     * @throws FileSizeLimitExceededException If the file exceeds the file size limit
+     */
+    public void checkFileSize(MultipartFile file) throws FileSizeLimitExceededException {
+        if (file != null && file.getSize() > fileUploadSizeLimit) { // 5MB limit
+            logger.warn("File size exceeds limit: {} bytes. File name: {}", file.getSize(), file.getOriginalFilename());
+            throw new FileSizeLimitExceededException("File size exceeds limit of " + fileUploadSizeLimit + " bytes. File name: " + file.getOriginalFilename());
+        }
+    }
 
     // Specific functions
     /**

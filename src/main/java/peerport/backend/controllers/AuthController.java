@@ -1,5 +1,7 @@
 package peerport.backend.controllers;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -18,6 +20,7 @@ import peerport.backend.service.AuthService;
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
+    protected static final Logger logger = LogManager.getLogger();
 
     @Autowired
     private AuthService authService;
@@ -29,8 +32,12 @@ public class AuthController {
      */
     @GetMapping("/login/{provider}")
     public ResponseEntity<Void> login(@PathVariable String provider) {
+        logger.debug("Redirecting login request to OAuth2 provider: {}", provider);
+
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.LOCATION, "/oauth2/authorization/" + provider);
+        
+        logger.debug("Successfully generated OAuth2 redirect for provider: {}", provider);
         return new ResponseEntity<>(headers, HttpStatus.FOUND);
     }
 
@@ -40,8 +47,13 @@ public class AuthController {
      */
     @GetMapping("/me")
     public ResponseEntity<UserDTO> me() {
+        logger.debug("Retrieving authenticated user profile");
+
         // Get the logged in user's info from the security context
         // and return it as a DTO
-        return ResponseEntity.ok(authService.getCurrentUser().toDTO());
+        UserDTO currentUser = authService.getCurrentUser().toDTO();
+
+        logger.debug("Successfully retrieved authenticated user profile");
+        return ResponseEntity.ok(currentUser);
     }
 }

@@ -35,11 +35,14 @@ import peerport.backend.model.AnnouncementModel;
 import peerport.backend.service.AnnouncementService;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 @RestController
 @RequestMapping("/announcements")
 public class AnnouncementController {
-    
+    protected static final Logger logger = LogManager.getLogger();
+
     @Autowired
     private AnnouncementService announcementService;
 
@@ -57,6 +60,8 @@ public class AnnouncementController {
      */
     @GetMapping
     public ResponseEntity<List<AnnouncementDTO>> getAllAnnouncements() {
+        logger.debug("Retrieving all announcements");
+
         // Get all announcements
         List<AnnouncementModel> announcements = announcementService.getAllAnnouncements();
 
@@ -67,6 +72,7 @@ public class AnnouncementController {
         }
 
         // Return the DTOs
+        logger.debug("Successfully retrieved all announcements");
         return ResponseEntity.ok(announcementDTOs);
     }
 
@@ -80,10 +86,12 @@ public class AnnouncementController {
      */
     @GetMapping("/{announcementId}")
     public ResponseEntity<AnnouncementDTO> getAnnouncementById(@PathVariable String announcementId) {
+        logger.debug("Retrieving announcement with ID: {}", announcementId);
         // Get the announcement by ID
         AnnouncementModel announcement = announcementService.getAnnouncementById(announcementId);
 
         // Return the announcement as DTO
+        logger.debug("Successfully retrieved announcement with ID: {}", announcementId);
         return ResponseEntity.ok(announcement.toDTO());
     }
 
@@ -103,10 +111,12 @@ public class AnnouncementController {
         @PathVariable String courseId, 
         @Valid @RequestBody AnnouncementModel announcementModel
     ) {
+        logger.debug("Creating announcement for course ID: {}", courseId);
         // Create announcement
         AnnouncementModel createdAnnouncement = announcementService.createAnnouncement(courseId, announcementModel);
 
         // Return the created announcement
+        logger.debug("Successfully created announcement with ID: {} for course ID: {}", createdAnnouncement.getAnnouncementId(), courseId);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdAnnouncement.toDTO());
     }
 
@@ -127,6 +137,8 @@ public class AnnouncementController {
         @RequestPart(value="announcement", required=false) String jsonAnnouncementModel,
         @RequestPart(value="files", required=false) List<MultipartFile> files
     ) throws IOException {
+        logger.debug("Creating announcement for course ID: {} with multipart/form-data", courseId);
+
         // Convert json to AnnouncementModel object
         AnnouncementModel announcementFromForm;
         try {
@@ -162,6 +174,7 @@ public class AnnouncementController {
         AnnouncementModel createdAnnouncement = announcementService.createAnnouncement(courseId, announcementFromForm, files);
 
         // Return the created announcement
+        logger.debug("Successfully created announcement with ID: {} for course ID: {}", createdAnnouncement.getAnnouncementId(), courseId);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdAnnouncement.toDTO());
     }
 
@@ -178,10 +191,13 @@ public class AnnouncementController {
     @PutMapping("/{announcementId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<AnnouncementDTO> updateAnnouncement(@PathVariable String announcementId, @Valid @RequestBody AnnouncementModel updatedAnnouncement) {
+        logger.debug("Updating announcement with ID: {}", announcementId);
+
         // Try to update announcement
         AnnouncementModel updated = announcementService.updateAnnouncement(announcementId, updatedAnnouncement);
         
         // Return the updated announcement with 200 OK
+        logger.debug("Successfully updated announcement with ID: {}", announcementId);
         return ResponseEntity.ok(updated.toDTO());
     }
 
@@ -204,6 +220,8 @@ public class AnnouncementController {
         @RequestPart(value="removeFileIds", required=false) List<String> removeFileIds,
         @RequestPart(value="replaceAll", required=false) Boolean replaceAll
     ) throws IOException {
+        logger.debug("Updating announcement with ID: {} with multipart/form-data", announcementId);
+
         // Convert json to AnnouncementModel object
         AnnouncementModel updatedAnnouncement;
         try {
@@ -247,6 +265,7 @@ public class AnnouncementController {
         );
         
         // Return the updated announcement with 200 OK
+        logger.debug("Successfully updated announcement with ID: {}", announcementId);
         return ResponseEntity.ok(updated.toDTO());
     }
 
@@ -263,10 +282,13 @@ public class AnnouncementController {
     @PatchMapping("/patch/{announcementId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<AnnouncementDTO> patchAnnouncement(@PathVariable String announcementId, @RequestBody AnnouncementModel patchedAnnouncement) {
+        logger.debug("Patching announcement with ID: {}", announcementId);
+
         // Try to patch announcement
         AnnouncementModel patched = announcementService.patchAnnouncement(announcementId, patchedAnnouncement);
         
         // Return the patched announcement with 200 OK
+        logger.debug("Successfully patched announcement with ID: {}", announcementId);
         return ResponseEntity.ok(patched.toDTO());
     }
 
@@ -289,6 +311,8 @@ public class AnnouncementController {
         @RequestPart(value="removeFileIds", required=false) List<String> removeFileIds,
         @RequestPart(value="replaceAll", required=false) Boolean replaceAll
     ) throws IOException {
+        logger.debug("Patching announcement with ID: {} with multipart/form-data", announcementId);
+
         // Convert json to AnnouncementModel object
         AnnouncementModel patchedAnnouncementModel;
         try {
@@ -332,6 +356,7 @@ public class AnnouncementController {
         );
         
         // Return the patched announcement with 200 OK
+        logger.debug("Successfully patched announcement with ID: {}", announcementId);
         return ResponseEntity.ok(patched.toDTO());
     }
 
@@ -347,10 +372,13 @@ public class AnnouncementController {
     @DeleteMapping("/delete/{announcementId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<Void> deleteAnnouncement(@PathVariable String announcementId) {
+        logger.debug("Deleting announcement with ID: {}", announcementId);
+
         // Delete the announcement
         announcementService.deleteAnnouncement(announcementId);
 
         // Return no content status
+        logger.debug("Successfully deleted announcement with ID: {}", announcementId);
         return ResponseEntity.noContent().build();
     }
 }

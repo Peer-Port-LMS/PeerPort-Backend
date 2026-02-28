@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,7 @@ import peerport.backend.model.RoleModel.Role;
 
 @Service
 public class AssignmentSubmissionService {
+    protected static final Logger logger = LogManager.getLogger();
 
     @Autowired
     private AssignmentSubmissionRepository assignmentSubmissionRepository;
@@ -54,12 +57,15 @@ public class AssignmentSubmissionService {
      * @throws UserNotAuthenticatedException If the user is not authenticated (Handled in GlobalExceptionHandler)
      */
     public List<AssignmentSubmissionModel> getAllAssignmentSubmissions() {
+        logger.debug("Getting all assignment submissions for the current user.");
+
         // Get the current user and role
         UserModel user = authService.getCurrentUser();
         Role role = user.getRole();
 
         // If admin return all
         if (role == Role.ADMIN) {
+            logger.debug("User is admin, returning all assignment submissions.");
             return assignmentSubmissionRepository.findAll();
         }
 
@@ -68,12 +74,16 @@ public class AssignmentSubmissionService {
 
         // Instructors: get all submissions for courses they teach
         if (role == Role.INSTRUCTOR) {
+            logger.trace("User is instructor, collecting submissions for courses they teach.");
+            
             user.getTaughtCourses().forEach(course ->
                 course.getAssignments().forEach(assignment -> {
                     submissions.addAll(assignment.getSubmissions());
                 })
             );
         } else {
+            logger.trace("User is student, collecting their own submissions.");
+
             // Students (and other non-admin, non-instructor roles): only their own submissions
             user.getEnrollments().forEach(enrollment ->
                 enrollment.getCourse().getAssignments().forEach(assignment ->
@@ -93,11 +103,15 @@ public class AssignmentSubmissionService {
             // Get the assignment submission by Id
             String id = submission.getAssignmentSubmissionId();
             if (seenIds.add(id)) {
+                logger.trace("Adding submission with ID {} to unique submissions list.", id);
                 uniqueSubmissions.add(submission);
+            } else {
+                logger.trace("Skipping duplicate submission with ID {}.", id);
             }
         }
 
         // Return the submissions
+        logger.debug("Returning {} unique assignment submissions for the current user.", uniqueSubmissions.size());
         return uniqueSubmissions;
     }
 
@@ -112,11 +126,14 @@ public class AssignmentSubmissionService {
      * @throws UserNotAuthorizedException If the user is not authorized to view the submission (Handled in GlobalExceptionHandler)
      */
     public AssignmentSubmissionModel getSubmissionById(String assignmentSubmissionId) {
+        logger.debug("Getting assignment submission by ID: {}", assignmentSubmissionId);
+
         // Get the assignment submission by ID
         Optional<AssignmentSubmissionModel> assignmentSubmissionOpt = assignmentSubmissionRepository.findById(assignmentSubmissionId);
 
         // Check if it exists
         if (assignmentSubmissionOpt.isEmpty()) {
+            logger.warn("Assignment submission with ID {} not found.", assignmentSubmissionId);
             throw new AssignmentSubmissionNotFoundException(assignmentSubmissionId);
         }
 
@@ -124,6 +141,7 @@ public class AssignmentSubmissionService {
         userAllowedToModifySubmission(assignmentSubmissionOpt.get());
 
         // Return the assignment submission
+        logger.debug("Returning assignment submission with ID: {}", assignmentSubmissionId);
         return assignmentSubmissionOpt.get();
     }
 
@@ -139,6 +157,8 @@ public class AssignmentSubmissionService {
      */
     @Transactional
     public AssignmentSubmissionModel createAssignmentSubmission(AssignmentSubmissionModel submission, AssignmentModel assignment) {
+        logger.debug("Creating new assignment submission for assignment ID: {}", assignment.getAssignmentId());
+
         // Get the user
         UserModel user = authService.getCurrentUser();
         
@@ -152,6 +172,7 @@ public class AssignmentSubmissionService {
         userAllowedToModifySubmission(submission);
 
         // Save the submission
+        logger.debug("Saving new assignment submission for user ID: {} and assignment ID: {}", user.getUserId(), assignment.getAssignmentId());
         return assignmentSubmissionRepository.save(submission);
     }
 
@@ -168,10 +189,13 @@ public class AssignmentSubmissionService {
      */
     @Transactional
     public AssignmentSubmissionModel createAssignmentSubmission(AssignmentSubmissionModel submission, String assignmentId) {
+        logger.debug("Creating new assignment submission for assignment ID: {}", assignmentId);
+
         // Get the assignment
         AssignmentModel assignment = assignmentService.getAssignmentById(assignmentId);
 
         // Save the submission
+        logger.debug("Saving new assignment submission for assignment ID: {}", assignmentId);
         return createAssignmentSubmission(submission, assignment);
     }
 
@@ -195,7 +219,10 @@ public class AssignmentSubmissionService {
         String assignmentId, 
         List<MultipartFile> files
     ) throws IOException {
+        logger.debug("Creating new assignment submission with files for assignment ID: {}", assignmentId);
+
         // Check the files and add them to the submission
+        fileService.checkFileSizes(files);
         if (files != null && !files.isEmpty()) {
             for (MultipartFile file : files) {
                 if (file != null && file.getSize() > fileUploadSizeLimit) {
@@ -212,13 +239,18 @@ public class AssignmentSubmissionService {
 
         // Save the assignment submission files now that the submission has an ID
         if (files != null && !files.isEmpty()) {
+            logger.trace("Saving files for assignment submission ID: {}", savedSubmission.getAssignmentSubmissionId());
+
             savedSubmission.setSubmittedFiles(
                 fileService.saveAssignmentSubmissionFiles(files, assignment, savedSubmission)
             );
+            
             // Persist the relationship between the submission and its files
             savedSubmission = assignmentSubmissionRepository.save(savedSubmission);
+            logger.trace("Files saved and linked to assignment submission ID: {}", savedSubmission.getAssignmentSubmissionId());
         }
 
+        logger.debug("Created new assignment submission with ID: {} for assignment ID: {}", savedSubmission.getAssignmentSubmissionId(), assignmentId);
         return savedSubmission;
     }
 
@@ -233,11 +265,14 @@ public class AssignmentSubmissionService {
      */
     @Transactional
     public void deleteAssignmentSubmissionById(String assignmentSubmissionId) {
+        logger.debug("Deleting assignment submission with ID: {}", assignmentSubmissionId);
+
         // Check if the submission exists and if the user is allowed to modify it
         getSubmissionById(assignmentSubmissionId);
 
         // Delete the assignment submission
         assignmentSubmissionRepository.deleteById(assignmentSubmissionId);
+        logger.debug("Deleted assignment submission with ID: {}", assignmentSubmissionId);
     }
 
 
@@ -251,25 +286,37 @@ public class AssignmentSubmissionService {
      * @throws UserNotAuthorizedException If the user is not authorized to modify the submission (Handled in GlobalExceptionHandler)
      */
     private void userAllowedToModifySubmission(AssignmentSubmissionModel submission) {
+        logger.debug("Checking if current user is allowed to modify submission with ID: {}", submission.getAssignmentSubmissionId());
+
         // Get the current user's role
         UserModel currentUser = authService.getCurrentUser();
         Role role = currentUser.getRole();
 
-        if (role == Role.ADMIN) return;
+        if (role == Role.ADMIN) {
+            logger.debug("User is admin, allowed to modify any submission.");
+            return;
+        }
         
         // If the user is an instructor allow them to create or delete a submission
         if (role == Role.INSTRUCTOR) {
+            logger.trace("User is instructor, checking if they teach the course for the submission's assignment.");
+
             // Check if the instructor teaches the course the assignment belongs to
             if (!currentUser.getTaughtCourses().contains(submission.getAssignment().getCourse())) {
+                logger.warn("Instructor user ID: {} is not authorized to modify submission ID: {} because they do not teach the course.", currentUser.getUserId(), submission.getAssignmentSubmissionId());
                 throw new UserNotAuthorizedException("You are not authorized to modify this submission.");
             }
+
+            logger.debug("Instructor user ID: {} is authorized to modify submission ID: {}.", currentUser.getUserId(), submission.getAssignmentSubmissionId());
             return;
         }
 
         // If the user is a student only allow them to modify their own submissions
         if (!submission.getUser().getUserId().equals(currentUser.getUserId())) {
+            logger.warn("Student user ID: {} is not authorized to modify submission ID: {} because they do not own the submission.", currentUser.getUserId(), submission.getAssignmentSubmissionId());
             throw new UserNotAuthorizedException("You are not authorized to modify this submission.");
         }
 
+        logger.debug("Student user ID: {} is authorized to modify their own submission ID: {}.", currentUser.getUserId(), submission.getAssignmentSubmissionId());
     }
 }

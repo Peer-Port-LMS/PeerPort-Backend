@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -32,6 +34,7 @@ import tools.jackson.databind.ObjectMapper;
 @RestController
 @RequestMapping("/courses")
 public class CourseController {
+    protected static final Logger logger = LogManager.getLogger();
 
     // Services
     @Autowired
@@ -58,6 +61,8 @@ public class CourseController {
     @GetMapping
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN)")
     public ResponseEntity<List<CourseWithInstructorsDTO>> getAllCourses() {
+        logger.debug("Retrieving all courses");
+
         // Get all courses
         List<CourseModel> courses = courseService.getAllCourses();
 
@@ -68,6 +73,7 @@ public class CourseController {
         }
 
         // Return the DTOs
+        logger.debug("Successfully retrieved {} courses", courseDTOs.size());
         return ResponseEntity.ok(courseDTOs);
     }
 
@@ -81,8 +87,13 @@ public class CourseController {
      */
     @GetMapping("/{courseId}")
     public ResponseEntity<CourseWithAllDetailsDTO> getCourseById(@PathVariable String courseId) {
+        logger.debug("Retrieving course with ID: {}", courseId);
+
         // Get and return the course
-        return ResponseEntity.ok(courseService.getCourseById(courseId).toCourseWithAllDetailsDTO());
+        CourseWithAllDetailsDTO courseDTO = courseService.getCourseById(courseId).toCourseWithAllDetailsDTO();
+
+        logger.debug("Successfully retrieved course with ID: {}", courseId);
+        return ResponseEntity.ok(courseDTO);
     }
 
     /**
@@ -105,6 +116,8 @@ public class CourseController {
         @RequestPart(value="course", required=false) String courseJsonFromForm,
         @RequestPart(value="image", required=true) MultipartFile image
     ) throws IOException {
+        logger.debug("Creating course with multipart/form-data");
+
         // Convert json to CourseModel object
         CourseModel courseFromForm;
 
@@ -140,6 +153,7 @@ public class CourseController {
         CourseModel savedCourse = courseService.createCourse(courseFromForm, image);
 
         // Return the created course
+        logger.debug("Successfully created course with ID: {}", savedCourse.getCourseId());
         return ResponseEntity.status(HttpStatus.CREATED).body(savedCourse.toDTO());
     }
 
@@ -167,6 +181,8 @@ public class CourseController {
         @RequestPart(value="course", required=false) String courseJsonFromForm,
         @RequestPart(value="image", required=false) MultipartFile image
     ) throws IOException {
+        logger.debug("Updating course with ID: {}", courseId);
+
         // Set default for courseFromForm
         CourseModel courseFromForm = null;
 
@@ -182,6 +198,8 @@ public class CourseController {
         }
 
         CourseModel updatedCourse = courseService.updateCourse(courseId, courseFromForm, image);
+
+        logger.debug("Successfully updated course with ID: {}", courseId);
         return ResponseEntity.ok(updatedCourse.toDTO());
     }
 
@@ -209,6 +227,8 @@ public class CourseController {
         @RequestPart(value="course", required=false) String courseJsonFromForm,
         @RequestPart(value="image", required=false) MultipartFile image
     ) throws IOException {
+        logger.debug("Patching course with ID: {}", courseId);
+
         // Set default for courseFromForm
         CourseModel courseFromForm = null;
 
@@ -227,6 +247,7 @@ public class CourseController {
         CourseModel updatedCourse = courseService.patchCourse(courseId, courseFromForm, image);
 
         // Return the updated course
+        logger.debug("Successfully patched course with ID: {}", courseId);
         return ResponseEntity.ok(updatedCourse.toDTO());
     }
 
@@ -242,7 +263,11 @@ public class CourseController {
     @DeleteMapping("/{courseId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<Void> deleteCourse(@PathVariable String courseId) {
+        logger.debug("Deleting course with ID: {}", courseId);
+
         courseService.deleteCourse(courseId);
+        
+        logger.debug("Successfully deleted course with ID: {}", courseId);
         return ResponseEntity.noContent().build();
     }
 }
