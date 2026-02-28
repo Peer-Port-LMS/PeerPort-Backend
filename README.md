@@ -101,9 +101,9 @@ Replace:
 - `YOUR_GITHUB_CLIENT_ID` with your GitHub OAuth App Client ID
 - `YOUR_GITHUB_CLIENT_SECRET` with your GitHub OAuth App Client Secret
 
-### CORS Configuration <small>(To be added soon)</small>
+### CORS Configuration <small>(Implemented - needs environment hardening)</small>
 
-The application is configured to allow requests from `http://localhost:5173` (frontend dev server). If your frontend runs on a different port, update the CORS configuration in:
+The application is configured to allow requests from `http://localhost:5173` (frontend dev server). For staging/production, externalize and restrict origins per environment.
 
 ```properties
 # CORS Configuration
@@ -229,6 +229,8 @@ Role-based access control (RBAC) with three roles:
 - **INSTRUCTOR**: Can create and manage courses, assignments, and announcements
 - **ADMIN**: Full system access
 
+Current status: core RBAC is implemented, while security hardening is still in progress (CSRF enablement strategy and endpoint authorization coverage checks).
+
 ### Database Relationships
 
 - **User ↔ Course**: Many-to-Many (via CourseInstructors join table; instructors can teach multiple courses)
@@ -260,6 +262,41 @@ User management endpoints
 The MVP focuses on core LMS functionality: course management, basic content delivery, assignments, and announcements with essential grading support.
 
 ### Core Features - MVP
+
+<details>
+<summary>Implement Authentication & Session Flows <img src="https://img.shields.io/badge/status-in%20progress-yellow" alt="In Progress"></summary>
+
+- [x] OAuth2 login flow implemented
+- [x] AuthController endpoints implemented (`/auth/login`, `/auth/me`)
+- [x] Service-level user bootstrap implemented
+- [ ] Verify unauthorized/session-expired behavior end-to-end
+- [ ] Add integration tests for auth flows
+- [ ] Add javaDoc comments
+</details>
+
+<details>
+<summary>Implement User Management <img src="https://img.shields.io/badge/status-in%20progress-yellow" alt="In Progress"></summary>
+
+- [x] Model implemented
+- [x] DTO implemented
+- [x] Service implemented
+- [x] Controller implemented
+- [ ] Verify role-boundary functionality end-to-end
+- [x] Add error messages
+- [x] Add javaDoc comments
+</details>
+
+<details>
+<summary>Implement Enrollment Management <img src="https://img.shields.io/badge/status-in%20progress-yellow" alt="In Progress"></summary>
+
+- [x] Model implemented
+- [x] DTO implemented
+- [x] Service implemented
+- [x] Controller implemented
+- [ ] Verify functionality
+- [x] Add error messages
+- [x] Add javaDoc comments
+</details>
 
 <details>
 <summary>Implement Courses <img src="https://img.shields.io/badge/status-in%20progress-yellow" alt="In Progress"></summary>
@@ -338,22 +375,24 @@ The MVP focuses on core LMS functionality: course management, basic content deli
 </details>
 
 <details>
-<summary>Testing & Documentation - MVP <img src="https://img.shields.io/badge/status-not%20started-red" alt="Not Started"></summary>
+<summary>Testing & Documentation - MVP <img src="https://img.shields.io/badge/status-in%20progress-yellow" alt="In Progress"></summary>
 
 - [ ] Swagger/OpenAPI implemented
-- [ ] Add unit tests for core features
+- [x] Add unit tests for core features
 - [ ] Add integration tests
 - [ ] Create basic user guides
 - [ ] Document API endpoints
 </details>
 
 ### MVP Priorities
-- [ ] Complete file attachment support for announcements and assignments
-- [ ] Finalize testing suite for MVP features
-- [ ] Complete API documentation
+- [ ] Complete basic grading workflow (scores + feedback + visibility)
+- [ ] Finalize testing suite for MVP features (focus: integration tests for auth and authorization boundaries)
+- [ ] Complete API documentation (OpenAPI/Swagger + endpoint usage examples)
 - [ ] Perform security review before launch
-- [ ] Enable CSRF protection in SecurityConfig
-- [ ] Implement file permissions and access control
+- [ ] Enable CSRF protection strategy in SecurityConfig for session-based auth
+- [x] Implement file permissions and access control
+- [ ] Harden SecurityConfig endpoint coverage for announcements, submissions, and file routes
+- [ ] Externalize `cors.allowed.origins` per environment (dev/staging/prod)
 
 ---
 
@@ -395,6 +434,14 @@ Enhanced features and improved user experience after MVP release.
 - [ ] Comprehensive API documentation
 - [ ] Create deployment guides
 - [ ] Performance testing and optimization
+</details>
+
+<details>
+<summary>API Consistency & Platform Hardening <img src="https://img.shields.io/badge/status-not%20started-red" alt="Not Started"></summary>
+
+- [ ] Normalize update/delete endpoint paths and HTTP verb consistency
+- [ ] Expand upload security controls (content-type allowlist for non-image uploads)
+- [ ] Add security event observability (auth failures, forbidden access, file access audit trail)
 </details>
 
 ---
