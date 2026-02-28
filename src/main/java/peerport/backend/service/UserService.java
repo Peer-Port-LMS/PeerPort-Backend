@@ -9,11 +9,11 @@ import org.springframework.stereotype.Service;
 import peerport.backend.database.UsersRepository;
 import peerport.backend.model.UserModel;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 @Service
 public class UserService {
-    protected static final Logger logger = LogManager.getLogger();
+    protected static final Logger logger = LoggerFactory.getLogger(UserService.class);
     
     @Autowired
     private UsersRepository userRepository;

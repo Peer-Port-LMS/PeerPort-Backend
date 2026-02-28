@@ -5,8 +5,8 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,7 +28,7 @@ import peerport.backend.model.RoleModel.Role;
  */
 @Service
 public class AuthService extends DefaultOAuth2UserService {
-    protected static final Logger logger = LogManager.getLogger();
+    protected static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
     public static final Role STUDENT = Role.STUDENT;
     public static final Role INSTRUCTOR = Role.INSTRUCTOR;

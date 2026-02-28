@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.LogManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -30,7 +30,7 @@ import peerport.backend.model.CourseModel;
 
 @Service
 public class ContentService {
-    protected static final Logger logger = LogManager.getLogger();
+    protected static final Logger logger = LoggerFactory.getLogger(ContentService.class);
     
     @Autowired
     private ContentRepository contentRepository;

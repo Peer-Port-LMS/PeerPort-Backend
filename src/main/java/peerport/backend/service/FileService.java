@@ -25,8 +25,8 @@ import peerport.backend.model.AssignmentSubmissionModel;
 import peerport.backend.model.FileModel;
 import peerport.backend.model.UserModel;
 import peerport.backend.model.RoleModel.Role;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -34,7 +34,7 @@ import org.apache.logging.log4j.Logger;
  */
 @Service
 public class FileService {
-    protected static final Logger logger = LogManager.getLogger();
+    protected static final Logger logger = LoggerFactory.getLogger(FileService.class);
 
     @Autowired
     private FilesRepository filesRepository;

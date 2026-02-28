@@ -35,13 +35,13 @@ import peerport.backend.model.AnnouncementModel;
 import peerport.backend.service.AnnouncementService;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/announcements")
 public class AnnouncementController {
-    protected static final Logger logger = LogManager.getLogger();
+    protected static final Logger logger = LoggerFactory.getLogger(AnnouncementController.class);
 
     @Autowired
     private AnnouncementService announcementService;

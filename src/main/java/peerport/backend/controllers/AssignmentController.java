@@ -3,8 +3,8 @@ package peerport.backend.controllers;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -37,7 +37,7 @@ import tools.jackson.databind.ObjectMapper;
 @RestController
 @RequestMapping("/assignments")
 public class AssignmentController {
-    protected static final Logger logger = LogManager.getLogger();
+    protected static final Logger logger = LoggerFactory.getLogger(AssignmentController.class);
     
 	@Autowired
 	private AssignmentService assignmentService;

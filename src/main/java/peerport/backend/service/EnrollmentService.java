@@ -3,8 +3,8 @@ package peerport.backend.service;
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,7 +13,7 @@ import peerport.backend.model.EnrollmentModel;
 
 @Service
 public class EnrollmentService {
-    protected static final Logger logger = LogManager.getLogger();
+    protected static final Logger logger = LoggerFactory.getLogger(EnrollmentService.class);
     
     @Autowired
     private EnrollmentsRepository enrollmentRepository;

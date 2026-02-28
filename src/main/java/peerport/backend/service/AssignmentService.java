@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -30,7 +30,7 @@ import peerport.backend.model.RoleModel.Role;
 
 @Service
 public class AssignmentService {
-    protected static final Logger logger = LogManager.getLogger();
+    protected static final Logger logger = LoggerFactory.getLogger(AssignmentService.class);
     
     @Autowired
     private AuthService authService;
