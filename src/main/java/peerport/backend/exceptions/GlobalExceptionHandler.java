@@ -18,6 +18,7 @@ import peerport.backend.exceptions.assignmentSubmissions.AssignmentSubmissionNot
 import peerport.backend.exceptions.courses.CourseNotFoundException;
 import peerport.backend.exceptions.files.FileSizeLimitExceededException;
 import peerport.backend.exceptions.files.InvalidFileTypeException;
+import peerport.backend.exceptions.grades.GradeNotFoundException;
 import peerport.backend.exceptions.users.UserNotAuthenticatedException;
 import peerport.backend.exceptions.users.UserNotAuthorizedException;
 import peerport.backend.exceptions.users.UserNotFoundException;
@@ -168,6 +169,18 @@ public class GlobalExceptionHandler {
         ErrorDTO errorDTO = new ErrorDTO(
             HttpStatus.NOT_FOUND.value(),
             "File with ID: " + ex.getMessage() + " not found.",
+            request.getDescription(false).replace("uri=", "")
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorDTO);
+    }
+
+
+    // Grade exceptions
+    @ExceptionHandler(GradeNotFoundException.class)
+    public ResponseEntity<ErrorDTO> handleGradeNotFoundException(GradeNotFoundException ex, WebRequest request) {
+        ErrorDTO errorDTO = new ErrorDTO(
+            HttpStatus.NOT_FOUND.value(),
+            ex.getMessage(),
             request.getDescription(false).replace("uri=", "")
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorDTO);
