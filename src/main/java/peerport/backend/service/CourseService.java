@@ -13,6 +13,7 @@ import peerport.backend.exceptions.courses.CourseNotFoundException;
 import peerport.backend.exceptions.files.FileSizeLimitExceededException;
 import peerport.backend.exceptions.users.UserNotAuthenticatedException;
 import peerport.backend.exceptions.users.UserNotAuthorizedException;
+import peerport.backend.model.AssignmentModel;
 import peerport.backend.model.CourseModel;
 import peerport.backend.model.EnrollmentModel;
 import peerport.backend.model.UserModel;
@@ -120,17 +121,18 @@ public class CourseService {
     public CourseModel getCourseById(String courseId) {
         logger.debug("Attempting to retrieve course with ID: {}", courseId);
 
+        // Get the course from the repository
         Optional<CourseModel> courseOpt = courseRepository.findById(courseId);
         if (courseOpt.isEmpty()) {
             logger.warn("Course with ID: {} not found", courseId);
             throw new CourseNotFoundException(courseId);
         }
-        
         CourseModel course = courseOpt.get();
         
         // Check if the user is allowed to access the course
         userAllowedToAccessCourse(course);
-        
+
+        // Return the course
         logger.debug("Successfully retrieved course with ID: {}", courseId);
         return course;
     }
