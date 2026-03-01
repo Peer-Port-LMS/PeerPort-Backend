@@ -106,6 +106,13 @@ public class GradeModel {
         this.submission = submission;
     }
 
+    public float getPercentage() {
+        if (this.gradeObtained == -1) {
+            return -1;
+        }
+        return ((float)this.gradeObtained / this.maxGrade) * 100;
+    }
+
 
     // DTO methods
     public GradeDTO toDTO() {
