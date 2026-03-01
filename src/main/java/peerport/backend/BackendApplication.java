@@ -19,12 +19,16 @@ public class BackendApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(BackendApplication.class, args);
-		logger.info("PeerPort backend started successfully.");
+		logger.info("PeerPort backend started successfully. Link: http://localhost:8080");
 	}
 
 	// Authentication
 	@GetMapping("/user")
 	public Map<String, Object> user(@AuthenticationPrincipal OAuth2User principal) {
+		if (principal == null) {
+			logger.warn("Unauthorized access attempt to /user endpoint.");
+			return Collections.singletonMap("error", "Unauthorized");
+		}
 		return Collections.singletonMap("name", principal.getAttribute("name"));
 	}
 
