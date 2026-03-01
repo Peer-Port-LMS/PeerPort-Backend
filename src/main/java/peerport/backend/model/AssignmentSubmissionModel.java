@@ -117,6 +117,10 @@ public class AssignmentSubmissionModel {
         this.submittedFiles = submittedFiles;
     }
 
+    public GradeModel getGrade() {
+        return grade;
+    }
+
     public void setGrade(GradeModel grade) {
         this.grade = grade;
     }
