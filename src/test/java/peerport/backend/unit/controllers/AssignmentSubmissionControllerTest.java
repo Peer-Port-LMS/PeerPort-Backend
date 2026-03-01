@@ -92,7 +92,7 @@ class AssignmentSubmissionControllerTest {
     private AssignmentSubmissionModel buildDetailedSubmission(String submissionId, String userId, String assignmentId, String courseId) {
         UserModel user = new UserModel(userId, "Student", "student@test.com", null, null, Role.STUDENT);
         CourseModel course = new CourseModel(courseId, "Course", "C1", true, "desc", new Date(), new Date());
-        AssignmentModel assignment = new AssignmentModel(assignmentId, "Assignment", "desc", true, new Date(), new Date(), new Date(), course);
+        AssignmentModel assignment = new AssignmentModel(assignmentId, "Assignment", "desc", true, true, new Date(), new Date(), new Date(), course);
         return new AssignmentSubmissionModel(submissionId, new Date(), "comment", user, assignment, List.of());
     }
 }
