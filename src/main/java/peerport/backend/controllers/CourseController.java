@@ -19,11 +19,17 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import jakarta.validation.groups.Default;
 import peerport.backend.exceptions.FailedToParseFormDataException;
+import peerport.backend.exceptions.courses.CourseNotFoundException;
+import peerport.backend.exceptions.files.InvalidFileTypeException;
+import peerport.backend.exceptions.users.UserNotAuthenticatedException;
+import peerport.backend.exceptions.users.UserNotAuthorizedException;
+import peerport.backend.dto.assignments.AssignmentDTO;
 import peerport.backend.dto.courses.CourseDTO;
 import peerport.backend.dto.courses.CourseWithAllDetailsDTO;
 import peerport.backend.dto.courses.CourseWithInstructorsDTO;
 import peerport.backend.model.CourseModel;
 import peerport.backend.model.groups.OnCreate;
+import peerport.backend.service.AssignmentSubmissionService;
 import peerport.backend.service.CourseService;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
@@ -39,6 +45,9 @@ public class CourseController {
     // Services
     @Autowired
     private CourseService courseService;
+
+    @Autowired
+    private AssignmentSubmissionService assignmentSubmissionService;
     
     // Helper
     @Autowired
@@ -89,9 +98,29 @@ public class CourseController {
     public ResponseEntity<CourseWithAllDetailsDTO> getCourseById(@PathVariable String courseId) {
         logger.debug("Retrieving course with ID: {}", courseId);
 
-        // Get and return the course
-        CourseWithAllDetailsDTO courseDTO = courseService.getCourseById(courseId).toCourseWithAllDetailsDTO();
+        // Get the course
+        CourseModel course = courseService.getCourseById(courseId);
 
+        // Convert to DTO
+        CourseWithAllDetailsDTO courseDTO = course.toCourseWithAllDetailsDTO();
+
+        // Remove the privileged information if the user is not an instructor or admin
+        try {
+            courseService.userAllowedToEditCourse(courseId);
+            // User is an instructor or admin, so they can see all information, no need to remove anything
+        } catch (UserNotAuthorizedException e) {
+            // User is not an instructor or admin, so remove privileged information
+            courseDTO.removePrivilegedDetails();
+        }
+
+        // Set grades for assignments 
+        // Students get their own grade, Instructors(and admins) get the average grade for the assignment
+        for (AssignmentDTO assignmentDTO : courseDTO.assignments) {
+            float grade = this.assignmentSubmissionService.getUsersGradeForAssignment(assignmentDTO.assignmentId);
+            assignmentDTO.grade = grade;
+        }
+
+        // Return the course
         logger.debug("Successfully retrieved course with ID: {}", courseId);
         return ResponseEntity.ok(courseDTO);
     }
