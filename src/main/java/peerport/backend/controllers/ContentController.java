@@ -26,6 +26,10 @@ import peerport.backend.dto.content.ContentDTO;
 import peerport.backend.dto.content.ContentWithAllDetailsDTO;
 import peerport.backend.dto.content.ContentWithChildrenDTO;
 import peerport.backend.exceptions.FailedToParseFormDataException;
+import peerport.backend.exceptions.content.ContentNotFoundException;
+import peerport.backend.exceptions.courses.CourseNotFoundException;
+import peerport.backend.exceptions.users.UserNotAuthenticatedException;
+import peerport.backend.exceptions.users.UserNotAuthorizedException;
 import peerport.backend.model.ContentModel;
 import peerport.backend.service.ContentService;
 import tools.jackson.core.JacksonException;
@@ -80,6 +84,16 @@ public class ContentController {
         return ResponseEntity.ok(content.toContentWithAllDetailsDTO());
     }
 
+    /**
+     * Creates content for a course using a JSON request body.
+     *
+     * @param courseId The ID of the course that will own the content.
+     * @param content The content payload to create.
+     * @return Response entity containing the created content DTO.
+     * @throws CourseNotFoundException if the target course does not exist (Handled in GlobalExceptionHandler).
+     * @throws UserNotAuthorizedException if the current user is not allowed to create content in the course (Handled in GlobalExceptionHandler).
+     * @throws UserNotAuthenticatedException if the current user is not authenticated (Handled in GlobalExceptionHandler).
+     */
     @PostMapping("/{courseId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<ContentDTO> createContent(@PathVariable String courseId, @RequestBody ContentModel content) {
@@ -93,6 +107,17 @@ public class ContentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(savedContent.toDTO());
     }
 
+    /**
+     * Creates content for a course using a JSON request body.
+     *
+     * @param courseId The ID of the course that will own the content.
+     * @param content The content payload to create.
+     * @return Response entity containing the created content DTO.
+     * @throws CourseNotFoundException if the target course does not exist (Handled in GlobalExceptionHandler).
+     * @throws UserNotAuthorizedException if the current user is not allowed to create content in the course (Handled in GlobalExceptionHandler).
+     * @throws UserNotAuthenticatedException if the current user is not authenticated (Handled in GlobalExceptionHandler).
+     * @throws FailedToParseFormDataException if the JSON content data is missing or cannot be parsed into a ContentModel.
+     */
     @PostMapping(path="/{courseId}", consumes=MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<ContentDTO> createContent(
