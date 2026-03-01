@@ -13,7 +13,6 @@ import peerport.backend.exceptions.courses.CourseNotFoundException;
 import peerport.backend.exceptions.files.FileSizeLimitExceededException;
 import peerport.backend.exceptions.users.UserNotAuthenticatedException;
 import peerport.backend.exceptions.users.UserNotAuthorizedException;
-import peerport.backend.model.AssignmentModel;
 import peerport.backend.model.CourseModel;
 import peerport.backend.model.EnrollmentModel;
 import peerport.backend.model.UserModel;
