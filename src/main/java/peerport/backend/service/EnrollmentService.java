@@ -65,6 +65,7 @@ public class EnrollmentService {
     public boolean deleteEnrollment(String enrollmentId) {
         logger.debug("Attempting to delete enrollment with ID: {}", enrollmentId);
 
+        // Check if the enrollment exists before attempting to delete
         if (enrollmentRepository.existsById(enrollmentId)) {
             enrollmentRepository.deleteById(enrollmentId);
             logger.debug("Successfully deleted enrollment with ID: {}", enrollmentId);
