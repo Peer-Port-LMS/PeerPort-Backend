@@ -11,6 +11,8 @@ import peerport.backend.model.UserModel;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+
 @Service
 public class UserService {
     protected static final Logger logger = LoggerFactory.getLogger(UserService.class);
@@ -18,7 +20,11 @@ public class UserService {
     @Autowired
     private UsersRepository userRepository;
 
-    // Create user
+    /**
+     * Create a new user in the database.
+     * @param user - The user model containing the details of the user to be created.
+     * @return The saved user model with the generated ID.
+     */
     public UserModel createUser(UserModel user) {
         logger.debug("Attempting to create user with email: {}", user.getEmail());
         UserModel savedUser = userRepository.save(user);
@@ -27,13 +33,20 @@ public class UserService {
         return savedUser;
     }
 
-    // Get all users
+    /**
+     * Retrieve all users from the database.
+     * @return A list of all user models in the database.
+     */
     public List<UserModel> getAllUsers() {
         logger.debug("Retrieving all users from the database");
         return userRepository.findAll();
     }
 
-    // Get user by ID
+    /**
+     * Retrieve a user by their unique ID.
+     * @param uuid - The unique ID of the user to retrieve.
+     * @return An Optional containing the user model if found, or empty if not found.
+     */
     public Optional<UserModel> getUserById(String uuid) {
         logger.debug("Attempting to retrieve user with ID: {}", uuid);
 
@@ -46,7 +59,11 @@ public class UserService {
         return userOpt;
     }
 
-    // Delete user by ID
+    /**
+     * Delete a user from the database by their unique ID.
+     * @param uuid - The unique ID of the user to delete.
+     * @return true if the user was deleted, false otherwise.
+     */
     public boolean deleteUser(String uuid) {
         logger.debug("Attempting to delete user with ID: {}", uuid);
         if (userRepository.existsById(uuid)) {
@@ -59,7 +76,12 @@ public class UserService {
         return false;
     }
 
-    // Update user
+    /**
+     * Update an existing user's details in the database.
+     * @param uuid - The unique ID of the user to update.
+     * @param updatedUser - The user model containing the updated details of the user.
+     * @return An Optional containing the updated user model if the update was successful, or empty if the user was not found.
+     */
     public Optional<UserModel> updateUser(String uuid, UserModel updatedUser) {
         logger.debug("Attempting to update user with ID: {}", uuid);
         return userRepository.findById(uuid).map(user -> {
