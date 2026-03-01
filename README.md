@@ -198,8 +198,10 @@ REST API endpoints that handle HTTP requests and responses. Each controller mana
 - **AuthController**: OAuth2 authentication flow with provider redirects (GitHub, etc.)
 - **CourseController**: Full CRUD operations for courses including image uploads, course filtering, and instructor management
 - **AssignmentController**: Complete assignment lifecycle (create, read, update, delete) with visibility controls and due date management
+- **AssignmentSubmissionController**: Assignment submission creation/retrieval/deletion with multipart file upload support
 - **AnnouncementController**: Course announcements with creation, updates, and deletion capabilities
 - **ContentController**: Hierarchical content structure management with parent-child relationships
+- **GradeController**: Grade CRUD and linking grades to assignment submissions
 - **FileController**: File download/serving with secure file access and metadata handling
 - **EnrollmentController**: Student course enrollment management and enrollment records
 - **UserController**: User profile management and user data retrieval
@@ -209,6 +211,8 @@ JPA entities that map to database tables:
 - **CourseModel**: Course information including title, description, start/end dates, image references, and many-to-many instructor relationships
 - **UserModel**: User accounts with OAuth2 provider authentication, profile pictures, ID numbers, and role-based access control
 - **AssignmentModel**: Assignments with names, descriptions, due dates, point values, and visibility flags
+- **AssignmentSubmissionModel**: Student assignment submissions with submission metadata, attached files, and optional grade relationship
+- **GradeModel**: Submission grading data including obtained grade, maximum grade, feedback, and graded timestamps
 - **AnnouncementModel**: Course announcements with titles, content, creation/update timestamps, and course associations
 - **ContentModel**: Hierarchical content structure supporting parent-child relationships for organizing course materials
 - **FileModel**: File metadata and storage paths with secure file serving and cleanup on deletion
@@ -237,6 +241,8 @@ Current status: core RBAC is implemented, while security hardening is still in p
 - **User → Enrollment**: One-to-Many (users have multiple enrollment records for different courses)
 - **Enrollment ← User & Course**: Composite relationship (enrollment acts as a join table with metadata like dateEnrolled and dateCompleted)
 - **Course → Assignment**: One-to-Many (each course has multiple assignments)
+- **Assignment → AssignmentSubmission**: One-to-Many (each assignment can have multiple student submissions)
+- **AssignmentSubmission → Grade**: One-to-One (a submission can have a single grade record)
 - **Course → Announcement**: One-to-Many (each course has multiple announcements)
 - **Course → Content**: One-to-Many (each course has hierarchical content)
 - **Content → Content**: Self-referential Many-to-One (supports hierarchical parent-child structure)
@@ -357,20 +363,22 @@ The MVP focuses on core LMS functionality: course management, basic content deli
 - [x] Service implemented
 - [x] Controller implemented
 - [x] File attachment implemented
+- [x] Add unit tests for assignment-scoped submissions and grade retrieval helpers
 - [ ] Verify functionality
 - [x] Add error messages
 - [x] Add javaDoc comments
 </details>
 
 <details>
-<summary>Implement Basic Grading <img src="https://img.shields.io/badge/status-not%20started-red" alt="Not Started"></summary>
+<summary>Implement Basic Grading <img src="https://img.shields.io/badge/status-in%20progress-yellow" alt="In Progress"></summary>
 
-- [ ] Grade Model implemented
-- [ ] Grade DTO implemented
-- [ ] Grade Service implemented
-- [ ] Grade Controller implemented
-- [ ] Verify functionality
-- [ ] Add error messages
+- [x] Grade Model implemented
+- [x] Grade DTO implemented
+- [x] Grade Service implemented
+- [x] Grade Controller implemented
+- [x] Add error messages
+- [x] Add unit tests (service + model mapping)
+- [ ] Verify functionality end-to-end
 - [ ] Add javaDoc comments
 </details>
 
@@ -379,13 +387,14 @@ The MVP focuses on core LMS functionality: course management, basic content deli
 
 - [ ] Swagger/OpenAPI implemented
 - [x] Add unit tests for core features
+- [x] Add unit tests for assignment submission grade helper methods
 - [ ] Add integration tests
 - [ ] Create basic user guides
 - [ ] Document API endpoints
 </details>
 
 ### MVP Priorities
-- [ ] Complete basic grading workflow (scores + feedback + visibility)
+- [x] Complete basic grading workflow (scores + feedback + visibility)
 - [ ] Finalize testing suite for MVP features (focus: integration tests for auth and authorization boundaries)
 - [ ] Complete API documentation (OpenAPI/Swagger + endpoint usage examples)
 - [ ] Perform security review before launch
