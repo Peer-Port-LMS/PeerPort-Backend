@@ -28,6 +28,11 @@ public class EnrollmentController {
 	@Autowired
 	private EnrollmentService enrollmentService;
 
+	/**
+	 * Retrieves all enrollments.
+	 *
+	 * @return Response entity containing all enrollments.
+	 */
 	@GetMapping
 	public ResponseEntity<List<EnrollmentModel>> getAllEnrollments() {
 		logger.debug("Retrieving all enrollments");
@@ -38,6 +43,12 @@ public class EnrollmentController {
 		return ResponseEntity.ok(enrollments);
 	}
 
+	/**
+	 * Retrieves an enrollment by ID.
+	 *
+	 * @param enrollmentId The enrollment ID.
+	 * @return Response entity containing the enrollment when found, otherwise 404.
+	 */
 	@GetMapping("/{enrollmentId}")
 	public ResponseEntity<EnrollmentModel> getEnrollmentById(@PathVariable String enrollmentId) {
 		logger.debug("Attempting to retrieve enrollment with ID: {}", enrollmentId);
@@ -52,6 +63,12 @@ public class EnrollmentController {
 		return ResponseEntity.notFound().build();
 	}
 
+	/**
+	 * Creates a new enrollment.
+	 *
+	 * @param enrollment The enrollment payload to create.
+	 * @return Response entity containing the created enrollment.
+	 */
 	@PostMapping
 	public ResponseEntity<EnrollmentModel> createEnrollment(@RequestBody EnrollmentModel enrollment) {
 		logger.debug("Creating a new enrollment");
@@ -62,6 +79,13 @@ public class EnrollmentController {
 		return ResponseEntity.status(HttpStatus.CREATED).body(savedEnrollment);
 	}
 
+	/**
+	 * Updates an existing enrollment.
+	 *
+	 * @param enrollmentId The ID of the enrollment to update.
+	 * @param enrollment The enrollment payload containing updated values.
+	 * @return Response entity containing the updated enrollment when found, otherwise 404.
+	 */
 	@PutMapping("/{enrollmentId}")
 	public ResponseEntity<EnrollmentModel> updateEnrollment(@PathVariable String enrollmentId, @RequestBody EnrollmentModel enrollment) {
 		logger.debug("Attempting to update enrollment with ID: {}", enrollmentId);
@@ -76,6 +100,12 @@ public class EnrollmentController {
 		return ResponseEntity.notFound().build();
 	}
 
+	/**
+	 * Deletes an enrollment by ID.
+	 *
+	 * @param enrollmentId The ID of the enrollment to delete.
+	 * @return Empty response with 204 when deleted, otherwise 404.
+	 */
 	@DeleteMapping("/{enrollmentId}")
 	public ResponseEntity<Void> deleteEnrollment(@PathVariable String enrollmentId) {
 		logger.debug("Deleting enrollment with ID: {}", enrollmentId);
