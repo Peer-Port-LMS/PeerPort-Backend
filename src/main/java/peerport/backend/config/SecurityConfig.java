@@ -53,6 +53,9 @@ public class SecurityConfig {
                 .requestMatchers("/enrollments/**").access((authentication, context) ->
                     new AuthorizationDecision(authService.hasAnyRole(Role.ADMIN, Role.INSTRUCTOR))
                 )
+                .requestMatchers("/grades/**").access((authentication, context) ->
+                    new AuthorizationDecision(authService.hasAnyRole(Role.ADMIN, Role.INSTRUCTOR))
+                )
 
                 // Public endpoints
                 .anyRequest().permitAll()
