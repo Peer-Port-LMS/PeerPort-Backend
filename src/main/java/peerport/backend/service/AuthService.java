@@ -37,6 +37,8 @@ public class AuthService extends DefaultOAuth2UserService {
     @Autowired
     private UsersRepository userRepository;
 
+    private boolean firstUser = false;
+
 
     // Load the user into the database upon authentication
     /**
@@ -93,10 +95,14 @@ public class AuthService extends DefaultOAuth2UserService {
         user.setName(name);
         user.setProfilePictureUrl(profilePictureUrl);
 
-        // Default role is STUDENT
-        if (user.getRole() == null) {
-            logger.trace("Setting default role for new user with email: {} to STUDENT", email);
-            user.setRole(Role.ADMIN); // Change to Role.STUDENT in production
+        // Update the role of the first user to ADMIN if they are the first user to register
+        // This allows admin access and the first setup of the application
+        if (!firstUser && this.userRepository.count() == 0) { 
+            logger.trace("Setting role for first user with email: {} to ADMIN", email);
+            user.setRole(Role.ADMIN);
+
+            // Set the firstUser flag to true to prevent subsequent users from being set as ADMIN
+            this.firstUser = true;
         }
         userRepository.save(user);
 
@@ -166,7 +172,7 @@ public class AuthService extends DefaultOAuth2UserService {
             logger.trace("Looking up user by email: {}", email);
             Optional<UserModel> user = userRepository.findByEmail(email);
             if (user.isPresent()) {
-                logger.debug("User found by email: {}", email);
+                logger.debug("User found with email: {}", email);
                 return user.get();
             }
         }
