@@ -3,6 +3,7 @@ package peerport.backend.model;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -47,7 +48,7 @@ public class AssignmentSubmissionModel {
     @OneToMany(mappedBy="assignmentSubmission", cascade=CascadeType.ALL, orphanRemoval=true)
     private List<FileModel> submittedFiles = new ArrayList<>();
 
-    @OneToOne
+    @OneToOne(mappedBy="submission", cascade=CascadeType.ALL, orphanRemoval=true)
     private GradeModel grade;
 
 
@@ -147,6 +148,7 @@ public class AssignmentSubmissionModel {
         // Fill in the fields
         dto.user = this.user.toDTO();
         dto.assignment = this.assignment.toDTO();
+        dto.grade = this.grade != null ? Optional.of(this.grade.toDTO()) : Optional.empty();
         dto.submittedFiles = new ArrayList<FileDTO>();
         for (FileModel file : this.submittedFiles) {
             dto.submittedFiles.add(file.toDTO());
