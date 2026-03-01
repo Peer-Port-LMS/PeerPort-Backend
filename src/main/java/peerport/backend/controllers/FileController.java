@@ -31,7 +31,17 @@ public class FileController {
     @Autowired
     private FileService fileService;
 
-    
+    /**
+     * Retrieves a file by ID and returns it as an inline resource.
+     *
+     * @param fileId The file ID.
+     * @return Response entity containing the file resource when available, otherwise 404.
+     * @throws FileNotFoundException if the file metadata does not exist or the user cannot access it.
+     * @throws MalformedURLException if the stored file path cannot be converted to a URL resource.
+     * @throws IOException if probing content type fails.
+     * @throws UserNotFoundException if the current user record cannot be resolved (Handled in GlobalExceptionHandler).
+     * @throws UserNotAuthenticatedException if the request is unauthenticated (Handled in GlobalExceptionHandler).
+     */
     @GetMapping("/{fileId}")
     public ResponseEntity<Resource> getFileById(@PathVariable String fileId) throws FileNotFoundException, MalformedURLException, IOException {
         logger.debug("Retrieving file with ID: {}", fileId);
