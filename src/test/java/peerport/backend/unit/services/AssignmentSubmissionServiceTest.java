@@ -32,6 +32,7 @@ import peerport.backend.model.AssignmentSubmissionModel;
 import peerport.backend.model.CourseModel;
 import peerport.backend.model.EnrollmentModel;
 import peerport.backend.model.FileModel;
+import peerport.backend.model.GradeModel;
 import peerport.backend.model.RoleModel.Role;
 import peerport.backend.model.UserModel;
 import peerport.backend.service.AssignmentService;
@@ -82,7 +83,7 @@ class AssignmentSubmissionServiceTest {
         void instructor_getsUniqueSubmissionsFromTaughtCourses() {
             UserModel instructor = new UserModel("i1", "Inst", "i@test.com", null, null, Role.INSTRUCTOR);
             CourseModel course = new CourseModel("c1", "Course", "C1", true, null, new Date(), new Date());
-            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, new Date(), new Date(), new Date(), course);
+            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, true, new Date(), new Date(), new Date(), course);
 
             AssignmentSubmissionModel s1 = new AssignmentSubmissionModel("s1", new Date(), "c", instructor, assignment, List.of());
             AssignmentSubmissionModel duplicateS1 = new AssignmentSubmissionModel("s1", new Date(), "c2", instructor, assignment, List.of());
@@ -105,7 +106,7 @@ class AssignmentSubmissionServiceTest {
             UserModel other = new UserModel("u2", "Other", "o@test.com", null, null, Role.STUDENT);
 
             CourseModel course = new CourseModel("c1", "Course", "C1", true, null, new Date(), new Date());
-            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, new Date(), new Date(), new Date(), course);
+            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, true, new Date(), new Date(), new Date(), course);
 
             AssignmentSubmissionModel own = new AssignmentSubmissionModel("s1", new Date(), "mine", student, assignment, List.of());
             AssignmentSubmissionModel notOwn = new AssignmentSubmissionModel("s2", new Date(), "other", other, assignment, List.of());
@@ -138,7 +139,7 @@ class AssignmentSubmissionServiceTest {
             UserModel owner = new UserModel("owner", "Owner", "owner@test.com", null, null, Role.STUDENT);
             UserModel requester = new UserModel("requester", "Requester", "req@test.com", null, null, Role.STUDENT);
             CourseModel course = new CourseModel("c1", "Course", "C1", true, null, new Date(), new Date());
-            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, new Date(), new Date(), new Date(), course);
+            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, true, new Date(), new Date(), new Date(), course);
             AssignmentSubmissionModel submission = new AssignmentSubmissionModel("s1", new Date(), "x", owner, assignment, List.of());
 
             when(repository.findById("s1")).thenReturn(Optional.of(submission));
@@ -149,12 +150,138 @@ class AssignmentSubmissionServiceTest {
     }
 
     @Nested
+    class GetUsersSubmissionsForAssignmentTests {
+        @Test
+        void getUsersSubmissionsForAssignment_adminGetsAllSubmissions() {
+            UserModel admin = new UserModel("admin", "Admin", "a@test.com", null, null, Role.ADMIN);
+            CourseModel course = new CourseModel("c1", "Course", "C1", true, null, new Date(), new Date());
+            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, true, new Date(), new Date(), new Date(), course);
+
+            AssignmentSubmissionModel s1 = new AssignmentSubmissionModel("s1", new Date(), "c1", admin, assignment, List.of());
+            AssignmentSubmissionModel s2 = new AssignmentSubmissionModel("s2", new Date(), "c2", admin, assignment, List.of());
+            assignment.setSubmissions(List.of(s1, s2));
+
+            when(authService.getCurrentUser()).thenReturn(admin);
+            when(assignmentService.getAssignmentById("a1")).thenReturn(assignment);
+
+            List<AssignmentSubmissionModel> result = service.getUsersSubmissionsForAssignment("a1");
+
+            assertEquals(2, result.size());
+            verify(assignmentService).userAllowedToAccessAssignment(assignment);
+        }
+
+        @Test
+        void getUsersSubmissionsForAssignment_studentGetsOnlyOwnSortedMostRecentFirst() {
+            UserModel student = new UserModel("u1", "Stu", "s@test.com", null, null, Role.STUDENT);
+            UserModel other = new UserModel("u2", "Other", "o@test.com", null, null, Role.STUDENT);
+            CourseModel course = new CourseModel("c1", "Course", "C1", true, null, new Date(), new Date());
+            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, true, new Date(), new Date(), new Date(), course);
+
+            AssignmentSubmissionModel ownOlder = new AssignmentSubmissionModel("s1", new Date(1_000), "older", student, assignment, List.of());
+            AssignmentSubmissionModel ownNewest = new AssignmentSubmissionModel("s2", new Date(2_000), "newer", student, assignment, List.of());
+            AssignmentSubmissionModel notOwn = new AssignmentSubmissionModel("s3", new Date(3_000), "other", other, assignment, List.of());
+            assignment.setSubmissions(List.of(notOwn, ownOlder, ownNewest));
+
+            when(authService.getCurrentUser()).thenReturn(student);
+            when(assignmentService.getAssignmentById("a1")).thenReturn(assignment);
+
+            List<AssignmentSubmissionModel> result = service.getUsersSubmissionsForAssignment("a1");
+
+            assertEquals(2, result.size());
+            assertEquals("s2", result.get(0).getAssignmentSubmissionId());
+            assertEquals("s1", result.get(1).getAssignmentSubmissionId());
+            verify(assignmentService).userAllowedToAccessAssignment(assignment);
+        }
+    }
+
+    @Nested
+    class GetUsersGradeForAssignmentTests {
+        @Test
+        void getUsersGradeForAssignment_adminGetsAverageOfGradedSubmissions() {
+            UserModel admin = new UserModel("admin", "Admin", "a@test.com", null, null, Role.ADMIN);
+            CourseModel course = new CourseModel("c1", "Course", "C1", true, null, new Date(), new Date());
+            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, true, new Date(), new Date(), new Date(), course);
+
+            AssignmentSubmissionModel s1 = new AssignmentSubmissionModel("s1", new Date(), "c1", admin, assignment, List.of());
+            GradeModel g1 = new GradeModel("g1", 8, 10, "good");
+            s1.setGrade(g1);
+
+            AssignmentSubmissionModel s2 = new AssignmentSubmissionModel("s2", new Date(), "c2", admin, assignment, List.of());
+            GradeModel g2 = new GradeModel("g2", 6, 10, "ok");
+            s2.setGrade(g2);
+
+            AssignmentSubmissionModel s3 = new AssignmentSubmissionModel("s3", new Date(), "c3", admin, assignment, List.of());
+            GradeModel ungraded = new GradeModel();
+            ungraded.setMaxGrade(10);
+            s3.setGrade(ungraded);
+
+            assignment.setSubmissions(List.of(s1, s2, s3));
+
+            when(authService.getCurrentUser()).thenReturn(admin);
+            when(assignmentService.getAssignmentById("a1")).thenReturn(assignment);
+
+            float result = service.getUsersGradeForAssignment("a1");
+
+            assertEquals(70.0f, result, 0.001f);
+        }
+
+        @Test
+        void getUsersGradeForAssignment_studentGetsLatestGradedSubmissionPercentage() {
+            UserModel student = new UserModel("u1", "Stu", "s@test.com", null, null, Role.STUDENT);
+            UserModel other = new UserModel("u2", "Other", "o@test.com", null, null, Role.STUDENT);
+            CourseModel course = new CourseModel("c1", "Course", "C1", true, null, new Date(), new Date());
+            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, true, new Date(), new Date(), new Date(), course);
+
+            AssignmentSubmissionModel oldSubmission = new AssignmentSubmissionModel("s1", new Date(1_000), "older", student, assignment, List.of());
+            GradeModel oldGrade = new GradeModel("g1", 5, 10, "old");
+            ReflectionTestUtils.setField(oldGrade, "dateGraded", new Date(2_000));
+            oldSubmission.setGrade(oldGrade);
+
+            AssignmentSubmissionModel newSubmission = new AssignmentSubmissionModel("s2", new Date(2_000), "newer", student, assignment, List.of());
+            GradeModel newGrade = new GradeModel("g2", 9, 10, "new");
+            ReflectionTestUtils.setField(newGrade, "dateGraded", new Date(3_000));
+            newSubmission.setGrade(newGrade);
+
+            AssignmentSubmissionModel notOwnSubmission = new AssignmentSubmissionModel("s3", new Date(3_000), "other", other, assignment, List.of());
+            GradeModel notOwnGrade = new GradeModel("g3", 10, 10, "other");
+            ReflectionTestUtils.setField(notOwnGrade, "dateGraded", new Date(4_000));
+            notOwnSubmission.setGrade(notOwnGrade);
+
+            assignment.setSubmissions(List.of(oldSubmission, newSubmission, notOwnSubmission));
+
+            when(authService.getCurrentUser()).thenReturn(student);
+            when(assignmentService.getAssignmentById("a1")).thenReturn(assignment);
+
+            float result = service.getUsersGradeForAssignment("a1");
+
+            assertEquals(90.0f, result, 0.001f);
+        }
+
+        @Test
+        void getUsersGradeForAssignment_returnsMinusOneWhenNoGradedSubmissions() {
+            UserModel student = new UserModel("u1", "Stu", "s@test.com", null, null, Role.STUDENT);
+            CourseModel course = new CourseModel("c1", "Course", "C1", true, null, new Date(), new Date());
+            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, true, new Date(), new Date(), new Date(), course);
+
+            AssignmentSubmissionModel submission = new AssignmentSubmissionModel("s1", new Date(), "ungraded", student, assignment, List.of());
+            assignment.setSubmissions(List.of(submission));
+
+            when(authService.getCurrentUser()).thenReturn(student);
+            when(assignmentService.getAssignmentById("a1")).thenReturn(assignment);
+
+            float result = service.getUsersGradeForAssignment("a1");
+
+            assertEquals(-1.0f, result, 0.001f);
+        }
+    }
+
+    @Nested
     class CreateAndDeleteTests {
         @Test
         void createAssignmentSubmission_linksUserAndAssignment() {
             UserModel student = new UserModel("u1", "Stu", "s@test.com", null, null, Role.STUDENT);
             CourseModel course = new CourseModel("c1", "Course", "C1", true, null, new Date(), new Date());
-            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, new Date(), new Date(), new Date(), course);
+            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, true, new Date(), new Date(), new Date(), course);
 
             AssignmentSubmissionModel request = new AssignmentSubmissionModel();
             request.setUser(student);
@@ -173,7 +300,7 @@ class AssignmentSubmissionServiceTest {
         void createAssignmentSubmission_withFiles_savesFilesAndSubmission() throws IOException {
             UserModel student = new UserModel("u1", "Stu", "s@test.com", null, null, Role.STUDENT);
             CourseModel course = new CourseModel("c1", "Course", "C1", true, null, new Date(), new Date());
-            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, new Date(), new Date(), new Date(), course);
+            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, true, new Date(), new Date(), new Date(), course);
 
             AssignmentSubmissionModel request = new AssignmentSubmissionModel();
             request.setUser(student);
@@ -197,7 +324,7 @@ class AssignmentSubmissionServiceTest {
         void createAssignmentSubmission_withNullFiles_doesNotSaveFiles() throws IOException {
             UserModel student = new UserModel("u1", "Stu", "s@test.com", null, null, Role.STUDENT);
             CourseModel course = new CourseModel("c1", "Course", "C1", true, null, new Date(), new Date());
-            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, new Date(), new Date(), new Date(), course);
+            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, true, new Date(), new Date(), new Date(), course);
 
             AssignmentSubmissionModel request = new AssignmentSubmissionModel();
             request.setUser(student);
@@ -219,7 +346,7 @@ class AssignmentSubmissionServiceTest {
         void deleteAssignmentSubmissionById_deletesWhenFoundAndAuthorized() {
             UserModel student = new UserModel("u1", "Stu", "s@test.com", null, null, Role.STUDENT);
             CourseModel course = new CourseModel("c1", "Course", "C1", true, null, new Date(), new Date());
-            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, new Date(), new Date(), new Date(), course);
+            AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, true, new Date(), new Date(), new Date(), course);
             AssignmentSubmissionModel submission = new AssignmentSubmissionModel("s1", new Date(), "ok", student, assignment, List.of());
 
             when(repository.findById("s1")).thenReturn(Optional.of(submission));
