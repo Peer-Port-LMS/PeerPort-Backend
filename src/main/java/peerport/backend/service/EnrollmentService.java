@@ -18,7 +18,12 @@ public class EnrollmentService {
     @Autowired
     private EnrollmentsRepository enrollmentRepository;
 
-    // Create Enrollment
+    /**
+     * Creates a new enrollment.
+     *
+     * @param enrollment The enrollment payload to create.
+     * @return The saved enrollment.
+     */
     public EnrollmentModel createEnrollment(EnrollmentModel enrollment) {
         logger.debug("Attempting to create enrollment for user with ID: {}", enrollment.getUser().getUserId());
         
@@ -28,13 +33,22 @@ public class EnrollmentService {
         return savedEnrollment;
     }
 
-    // Get all enrollments
+    /**
+     * Retrieves all enrollments.
+     *
+     * @return A list of all enrollments.
+     */
     public List<EnrollmentModel> getAllEnrollments() {
         logger.debug("Retrieving all enrollments from the database");
         return enrollmentRepository.findAll();
     }
 
-    // Get enrollment by ID
+    /**
+     * Retrieves an enrollment by ID.
+     *
+     * @param enrollmentId The enrollment ID.
+     * @return An optional containing the enrollment when found, otherwise empty.
+     */
     public Optional<EnrollmentModel> getEnrollmentById(String enrollmentId) {
         logger.debug("Attempting to retrieve enrollment with ID: {}", enrollmentId);
 
@@ -48,7 +62,13 @@ public class EnrollmentService {
         return enrollmentOpt;
     }
 
-    // Update enrollment
+    /**
+     * Updates an existing enrollment.
+     *
+     * @param enrollmentId The enrollment ID to update.
+     * @param updatedEnrollment The enrollment payload containing updated values.
+     * @return An optional containing the updated enrollment when found, otherwise empty.
+     */
     public Optional<EnrollmentModel> updateEnrollment(String enrollmentId, EnrollmentModel updatedEnrollment) {
         logger.debug("Attempting to update enrollment with ID: {}", enrollmentId);
         return enrollmentRepository.findById(enrollmentId).map(enrollment -> {
@@ -61,7 +81,12 @@ public class EnrollmentService {
         });
     }
 
-    // Delete enrollment
+    /**
+     * Deletes an enrollment by ID.
+     *
+     * @param enrollmentId The enrollment ID to delete.
+     * @return True when deletion succeeds, otherwise false.
+     */
     public boolean deleteEnrollment(String enrollmentId) {
         logger.debug("Attempting to delete enrollment with ID: {}", enrollmentId);
 
