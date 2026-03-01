@@ -166,7 +166,7 @@ class AssignmentSubmissionServiceTest {
 
             assertEquals(student, result.getUser());
             assertEquals(assignment, result.getAssignment());
-            verify(repository).save(request);
+            verify(repository, times(2)).save(request);
         }
 
         @Test
@@ -176,6 +176,7 @@ class AssignmentSubmissionServiceTest {
             AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, new Date(), new Date(), new Date(), course);
 
             AssignmentSubmissionModel request = new AssignmentSubmissionModel();
+            request.setUser(student);
             AssignmentSubmissionModel saved = new AssignmentSubmissionModel("s1", new Date(), "ok", student, assignment, List.of());
             MockMultipartFile file = new MockMultipartFile("files", "a.txt", "text/plain", "abc".getBytes());
             FileModel savedFile = new FileModel("a.txt", "tmp/a.txt", "txt", "text/plain");
@@ -189,7 +190,7 @@ class AssignmentSubmissionServiceTest {
 
             assertTrue(result.getSubmittedFiles().size() == 1);
             verify(fileService).checkFileSizes(List.of(file));
-            verify(repository, times(2)).save(any(AssignmentSubmissionModel.class));
+            verify(repository, times(3)).save(any(AssignmentSubmissionModel.class));
         }
 
         @Test
@@ -199,6 +200,7 @@ class AssignmentSubmissionServiceTest {
             AssignmentModel assignment = new AssignmentModel("a1", "A1", "desc", true, new Date(), new Date(), new Date(), course);
 
             AssignmentSubmissionModel request = new AssignmentSubmissionModel();
+            request.setUser(student);
             AssignmentSubmissionModel saved = new AssignmentSubmissionModel("s1", new Date(), "ok", student, assignment, List.of());
 
             when(assignmentService.getAssignmentById("a1")).thenReturn(assignment);
@@ -210,7 +212,7 @@ class AssignmentSubmissionServiceTest {
             assertEquals(saved, result);
             verify(fileService).checkFileSizes(null);
             verify(fileService, never()).saveAssignmentSubmissionFiles(any(), any(), any());
-            verify(repository, times(1)).save(any(AssignmentSubmissionModel.class));
+            verify(repository, times(2)).save(any(AssignmentSubmissionModel.class));
         }
 
         @Test
