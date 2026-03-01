@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import peerport.backend.dto.GradeDTO;
+import peerport.backend.exceptions.assignmentSubmissions.AssignmentSubmissionNotFoundException;
+import peerport.backend.exceptions.grades.GradeNotFoundException;
 import peerport.backend.model.GradeModel;
 import peerport.backend.service.GradeService;
 
@@ -32,6 +34,11 @@ public class GradeController {
     private GradeService gradeService;
 
 
+    /**
+     * Retrieves all grades.
+     *
+     * @return Response entity containing all grade DTOs.
+     */
     @GetMapping
     public ResponseEntity<List<GradeDTO>> getAllGrades() {
         logger.debug("Retrieving all grades from the database");
@@ -50,6 +57,13 @@ public class GradeController {
         return ResponseEntity.ok(gradeDTOs);
     }
 
+    /**
+     * Retrieves a grade by ID.
+     *
+     * @param gradeId The grade ID.
+     * @return Response entity containing the grade DTO.
+     * @throws GradeNotFoundException if the grade does not exist.
+     */
     @GetMapping("/{gradeId}")
     public ResponseEntity<GradeDTO> getGradeById(@PathVariable String gradeId) {
         logger.debug("Attempting to retrieve grade with ID: {}", gradeId);
@@ -65,6 +79,14 @@ public class GradeController {
         return ResponseEntity.ok(gradeDTO);
     }
 
+    /**
+     * Creates a new grade for a submission.
+     *
+     * @param grade The grade payload to create.
+     * @param submissionId The submission ID to link the grade to.
+     * @return Response entity containing the created grade DTO.
+     * @throws AssignmentSubmissionNotFoundException if the submission does not exist.
+     */
     @PostMapping("/{submissionId}")
     public ResponseEntity<GradeDTO> createGrade(@RequestBody GradeModel grade, @PathVariable String submissionId) {
         logger.debug("Attempting to create a new grade with data: {}", grade);
@@ -80,6 +102,14 @@ public class GradeController {
         return ResponseEntity.ok(createdGradeDTO);
     }
 
+    /**
+     * Updates an existing grade.
+     *
+     * @param gradeId The grade ID to update.
+     * @param grade The grade payload containing updated values.
+     * @return Response entity containing the updated grade DTO.
+     * @throws GradeNotFoundException if the grade does not exist.
+     */
     @PutMapping("/{gradeId}")
     public ResponseEntity<GradeDTO> updateGrade(@PathVariable String gradeId, @RequestBody GradeModel grade) {
         logger.debug("Attempting to update grade with ID: {} with data: {}", gradeId, grade);
@@ -95,6 +125,13 @@ public class GradeController {
         return ResponseEntity.ok(updatedGradeDTO);
     }
 
+    /**
+     * Deletes a grade by ID.
+     *
+     * @param gradeId The grade ID to delete.
+     * @return Empty response with 204.
+     * @throws GradeNotFoundException if the grade does not exist.
+     */
     @DeleteMapping("/{gradeId}")
     public ResponseEntity<Void> deleteGrade(@PathVariable String gradeId) {
         logger.debug("Attempting to delete grade with ID: {}", gradeId);
