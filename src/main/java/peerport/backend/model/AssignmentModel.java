@@ -40,6 +40,10 @@ public class AssignmentModel {
     private String description;
 
     private Boolean visible = true;
+    
+    @NotNull
+    @Column(name="\"gradesVisible\"")
+    private Boolean gradesVisible = true;
 
     @NotNull
     @Column(name="\"dueDate\"")
@@ -74,6 +78,7 @@ public class AssignmentModel {
         String name,
         String description,
         Boolean visible,
+        Boolean gradesVisible,
         Date dueDate,
         Date dateCreated,
         Date dateUpdated,
@@ -83,6 +88,7 @@ public class AssignmentModel {
         this.name = name;
         this.description = description;
         this.visible = visible;
+        this.gradesVisible = gradesVisible;
         this.dueDate = dueDate;
         this.dateCreated = dateCreated;
         this.dateUpdated = dateUpdated;
@@ -121,6 +127,14 @@ public class AssignmentModel {
 
     public void setVisible(Boolean visible) {
         this.visible = visible;
+    }
+
+    public Boolean getGradesVisible() {
+        return gradesVisible;
+    }
+
+    public void setGradesVisible(Boolean gradesVisible) {
+        this.gradesVisible = gradesVisible;
     }
 
     public Date getDueDate() {
@@ -172,17 +186,20 @@ public class AssignmentModel {
     }
 
 
-    // Conver to DTO
+    // Convert to DTO
     public <T extends AssignmentDTO> T baseFill(T dto) {
         // Fill in the fields
         dto.assignmentId = this.assignmentId;
         dto.name = this.name;
         dto.description = this.description;
         dto.visible = this.visible;
+        dto.gradesVisible = this.gradesVisible;
         dto.dueDate = this.dueDate;
         dto.courseId = this.course.getCourseId();
         dto.dateCreated = this.dateCreated;
         dto.dateUpdated = this.dateUpdated;
+
+        dto.grade = -1; // Default value indicating no grade available
         
         // Return the dto
         return dto;
