@@ -25,7 +25,11 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    // Get all users
+    /**
+     * Retrieves all users.
+     *
+     * @return Response entity containing all users.
+     */
     @GetMapping
     public ResponseEntity<List<UserModel>> getAllUsers() {
         logger.debug("Retrieving all users");
@@ -36,7 +40,12 @@ public class UserController {
         return ResponseEntity.ok(users);
     }
 
-    // Get course by ID
+    /**
+     * Retrieves a user by ID.
+     *
+     * @param uuid The user ID.
+     * @return Response entity containing the user when found, otherwise 404.
+     */
     @GetMapping("/{uuid}")
     public ResponseEntity<UserModel> getUserById(@PathVariable String uuid) {
         logger.debug("Attempting to retrieve user with ID: {}", uuid);
@@ -51,7 +60,12 @@ public class UserController {
         return ResponseEntity.notFound().build();
     }
 
-    // Create new course
+    /**
+     * Creates a new user.
+     *
+     * @param user The user payload to create.
+     * @return Response entity containing the created user.
+     */
     @PostMapping
     public ResponseEntity<UserModel> createUser(@RequestBody UserModel user) {
         logger.debug("Creating a new user");
@@ -62,7 +76,13 @@ public class UserController {
         return ResponseEntity.status(201).body(savedUser);
     }
 
-    // Update course
+    /**
+     * Updates an existing user.
+     *
+     * @param uuid The ID of the user to update.
+     * @param user The user payload containing updated values.
+     * @return Response entity containing the updated user when found, otherwise 404.
+     */
     @PostMapping("/{uuid}")
     public ResponseEntity<UserModel> updateUser(@PathVariable String uuid, @RequestBody UserModel user) {
         logger.debug("Attempting to update user with ID: {}", uuid);
@@ -77,7 +97,12 @@ public class UserController {
         return ResponseEntity.notFound().build();
     }
 
-    // Delete course
+    /**
+     * Deletes a user by ID.
+     *
+     * @param uuid The ID of the user to delete.
+     * @return Empty response with 204 when deleted, otherwise 404.
+     */
     @PostMapping("/{uuid}/delete")
     public ResponseEntity<Void> deleteUser(@PathVariable String uuid) {
         logger.debug("Deleting user with ID: {}", uuid);
