@@ -529,6 +529,13 @@ public class ContentService {
         logger.debug("User is allowed to edit content with ID: {}", contentId);
     }
 
+    /**
+     * Checks whether the current user is allowed to access a content item.
+     *
+     * @param content The content to validate access against.
+     * @throws UserNotAuthorizedException if the current user is not allowed to access the content's course (Handled in GlobalExceptionHandler).
+     * @throws UserNotAuthenticatedException if the current user is not authenticated (Handled in GlobalExceptionHandler).
+     */
     private void userAllowedToAccessContent(ContentModel content) {
         logger.debug("Checking if user is allowed to access content with ID: {}", content.getContentId());
 
