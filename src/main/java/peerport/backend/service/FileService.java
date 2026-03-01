@@ -50,7 +50,15 @@ public class FileService {
     @Value("${file.upload-size-limit}")
     private long fileUploadSizeLimit;
 
-    // Regular functions
+    /**
+     * Retrieves a file by ID after validating access for the current user.
+     *
+     * @param fileId The file ID.
+     * @return The resolved file model.
+     * @throws FileNotFoundException if the file does not exist or is not accessible to the current user.
+     * @throws UserNotFoundException if the current authenticated user cannot be found (Handled in GlobalExceptionHandler).
+     * @throws UserNotAuthenticatedException if there is no authenticated user in the current context (Handled in GlobalExceptionHandler).
+     */
     public FileModel getFileById(String fileId) throws FileNotFoundException {
         logger.debug("Attempting to retrieve file with ID: {}", fileId);
 
