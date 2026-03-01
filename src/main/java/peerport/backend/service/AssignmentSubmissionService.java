@@ -193,6 +193,18 @@ public class AssignmentSubmissionService {
         return userSubmissions;
     }
 
+    /**
+     * Returns the grade value relevant to the current user for a specific assignment.
+     * Instructors and admins receive the average graded percentage for the assignment,
+     * while students receive their most recent graded percentage.
+     *
+     * @param assignmentId The assignment ID.
+     * @return The user's relevant grade percentage, or -1 when no graded submission exists.
+     * @throws AssignmentNotFoundException if the assignment does not exist (Handled in GlobalExceptionHandler).
+     * @throws UserNotFoundException if the current user cannot be resolved (Handled in GlobalExceptionHandler).
+     * @throws UserNotAuthenticatedException if the request is unauthenticated (Handled in GlobalExceptionHandler).
+     * @throws UserNotAuthorizedException if the current user is not allowed to access submissions for the assignment (Handled in GlobalExceptionHandler).
+     */
     public float getUsersGradeForAssignment(String assignmentId) {
         logger.trace("Getting user's grade for assignment ID: {}", assignmentId);
         // Get the user and their role
