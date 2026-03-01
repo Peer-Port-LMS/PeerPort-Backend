@@ -92,6 +92,6 @@ class AssignmentControllerTest {
 
     private AssignmentModel buildAssignment(String assignmentId) {
         CourseModel course = new CourseModel("c1", "Course", "C1", true, null, new Date(), new Date());
-        return new AssignmentModel(assignmentId, "Assignment", "desc", true, new Date(), new Date(), new Date(), course);
+        return new AssignmentModel(assignmentId, "Assignment", "desc", true, true, new Date(), new Date(), new Date(), course);
     }
 }
