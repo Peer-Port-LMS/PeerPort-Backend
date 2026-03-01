@@ -18,6 +18,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import peerport.backend.database.AssignmentsRepository;
 import peerport.backend.exceptions.assignments.AssignmentNotFoundException;
+import peerport.backend.exceptions.courses.CourseNotFoundException;
 import peerport.backend.exceptions.files.FileSizeLimitExceededException;
 import peerport.backend.exceptions.FailedToParseFormDataException;
 import peerport.backend.exceptions.users.UserNotAuthenticatedException;
@@ -463,12 +464,18 @@ public class AssignmentService {
         logger.debug("User is allowed to edit assignment with ID: {}.", assignmentId);
     }
 
-    private void userAllowedToAccessAssignment(AssignmentModel assingment) {
-        logger.debug("Checking if user is allowed to access assignment with ID: {}.", assingment.getAssignmentId());
+    /**
+     * Check if user is allowed to access the assignment
+     * @param assignment - AssignmentModel to check
+     * @throws UserNotAuthorizedException if user is not authorized to access (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthenticatedException if user is not authenticated (Handled in GlobalExceptionHandler
+     */
+    public void userAllowedToAccessAssignment(AssignmentModel assignment) {
+        logger.debug("Checking if user is allowed to access assignment with ID: {}.", assignment.getAssignmentId());
 
         // Check if user is allowed to access the assignment
-        courseService.userAllowedToAccessCourse(assingment.getCourse());
-        logger.debug("User is allowed to access assignment with ID: {}.", assingment.getAssignmentId());
+        courseService.userAllowedToAccessCourse(assignment.getCourse());
+        logger.debug("User is allowed to access assignment with ID: {}.", assignment.getAssignmentId());
     }
 
     /**
