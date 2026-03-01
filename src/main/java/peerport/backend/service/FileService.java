@@ -181,6 +181,8 @@ public class FileService {
      * @throws FileSizeLimitExceededException If any of the files exceed the file size limit
      */
     public void checkFileSizes(List<MultipartFile> files) throws FileSizeLimitExceededException {
+        logger.debug("Checking file sizes for {} files against limit of {} bytes", files != null ? files.size() : 0, fileUploadSizeLimit);
+        
         // If files is null, skip the check
         if (files != null) {
             // Check each file size against the limit
@@ -196,6 +198,7 @@ public class FileService {
      * @throws FileSizeLimitExceededException If the file exceeds the file size limit
      */
     public void checkFileSize(MultipartFile file) throws FileSizeLimitExceededException {
+        logger.trace("Checking file size for file: {}. Size: {} bytes, Limit: {} bytes", file.getOriginalFilename(), file.getSize(), fileUploadSizeLimit);
         if (file != null && file.getSize() > fileUploadSizeLimit) { // 5MB limit
             logger.warn("File size exceeds limit: {} bytes. File name: {}", file.getSize(), file.getOriginalFilename());
             throw new FileSizeLimitExceededException("File size exceeds limit of " + fileUploadSizeLimit + " bytes. File name: " + file.getOriginalFilename());
@@ -213,6 +216,8 @@ public class FileService {
      */
     @Transactional
     public FileModel saveCourseImage(MultipartFile file, String courseId) throws IOException {
+        logger.debug("Saving course image for course with ID: {}", courseId);
+
         // Get the file extension
         String fileExtension = getFileExtension(file.getOriginalFilename());
 
@@ -222,16 +227,19 @@ public class FileService {
         // Get the content type
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
+            logger.warn("Invalid file type for course image: {}. File name: {}", contentType, file.getOriginalFilename());
             throw new InvalidFileTypeException("File must be an image. Received: " + contentType);
         }
 
         // Save the image
+        logger.trace("Saving course image for course with ID: {}. Original file name: {}, New file name: {}, Content type: {}", courseId, file.getOriginalFilename(), fileName, contentType);
         String savedImagePath = saveFile(file, this.uploadDir + "/" + this.coursesDir + "/" + courseId + "/" + fileName);
 
         // Create the new FileModel
         FileModel newFile = new FileModel(fileName, savedImagePath, fileExtension, contentType);
 
         // Save the file model to the database
+        logger.debug("Successfully saved course image for course with ID: {}. File name: {}", courseId, fileName);
         return filesRepository.save(newFile);
     }
 
@@ -246,6 +254,8 @@ public class FileService {
      */
     @Transactional
     public List<FileModel> saveAnnouncementFiles(List<MultipartFile> files, AnnouncementModel announcement, String courseId) throws IOException {
+        logger.debug("Saving {} files for announcement with ID: {}", files.size(), announcement.getAnnouncementId());
+
         List<FileModel> savedFiles = new ArrayList<>();
 
         long baseTimestamp = System.currentTimeMillis();
@@ -275,6 +285,7 @@ public class FileService {
             }
 
             // Save the file
+            logger.trace("Saving file for announcement with ID: {}. Original file name: {}, New file name: {}, Content type: {}", announcement.getAnnouncementId(), file.getOriginalFilename(), fileName, contentType);
             String savedFilePath = saveFile(
                 file, 
                 this.uploadDir + "/" + this.coursesDir + "/" + courseId + "/announcements/" + announcement.getAnnouncementId() + "/" + fileName
@@ -295,6 +306,7 @@ public class FileService {
         }
 
         // Return the saved files
+        logger.debug("Successfully saved {} files for announcement with ID: {}", savedFiles.size(), announcement.getAnnouncementId());
         return savedFiles;
     }
 
@@ -309,6 +321,7 @@ public class FileService {
      */
     @Transactional
     public List<FileModel> saveAssignmentFiles(List<MultipartFile> files, AssignmentModel assignment, String courseId) throws IOException {
+        logger.debug("Saving {} files for assignment with ID: {}", files.size(), assignment.getAssignmentId());
         List<FileModel> savedFiles = new ArrayList<>();
         
         long baseTimestamp = System.currentTimeMillis();
@@ -331,6 +344,7 @@ public class FileService {
                 contentType = "application/octet-stream";
             }
             
+            logger.trace("Saving file for assignment with ID: {}. Original file name: {}, New file name: {}, Content type: {}", assignment.getAssignmentId(), file.getOriginalFilename(), fileName, contentType);
             String savedFilePath = saveFile(
                 file,
                 this.uploadDir + "/" + this.coursesDir + "/" + courseId + "/assignments/" + assignment.getAssignmentId() + "/" + fileName
@@ -345,6 +359,7 @@ public class FileService {
             fileCounter++;
         }
         
+        logger.debug("Successfully saved {} files for assignment with ID: {}", savedFiles.size(), assignment.getAssignmentId());
         return savedFiles;
     }
 
@@ -363,6 +378,8 @@ public class FileService {
         AssignmentModel assignment,
         AssignmentSubmissionModel assignmentSubmission
     ) throws IOException {
+        logger.debug("Saving {} files for assignment submission with ID: {}", files.size(), assignmentSubmission.getAssignmentSubmissionId());
+
         List<FileModel> savedFiles = new ArrayList<>();
         
         long baseTimestamp = System.currentTimeMillis();
@@ -388,6 +405,7 @@ public class FileService {
             }
             
             // Save the file
+            logger.trace("Saving file for assignment submission with ID: {}. Original file name: {}, New file name: {}, Content type: {}", assignmentSubmission.getAssignmentSubmissionId(), file.getOriginalFilename(), fileName, contentType);
             String savedFilePath = saveFile(
                 file,
                 this.uploadDir + "/" 
@@ -411,6 +429,7 @@ public class FileService {
         }
         
         // Return the saved files
+        logger.debug("Successfully saved {} files for assignment submission with ID: {}", savedFiles.size(), assignmentSubmission.getAssignmentSubmissionId());
         return savedFiles;
     }
 
@@ -422,13 +441,17 @@ public class FileService {
      * @throws FileNotFoundException If the file was not found on the filesystem
      */
     public void deleteFile(FileModel file) throws IOException, FileNotFoundException {
+        logger.debug("Attempting to delete file with ID: {}", file.getFileId());
+
         // Delete the file from the filesystem
         if (!deleteFileHelper(file.getFilePath())) {
+            logger.error("File not found on filesystem for file with ID: {}. File path: {}", file.getFileId(), file.getFilePath());
             throw new FileNotFoundException("File not found on the filesystem: " + file.getFilePath());
         }
 
         // Delete the file from the repo first
         filesRepository.delete(file);
+        logger.debug("Successfully deleted file with ID: {}", file.getFileId());
     }
 
 
@@ -438,6 +461,7 @@ public class FileService {
      * @return The file extension
      */
     private String getFileExtension(String fileName) {
+        logger.trace("Getting file extension for file name: {}", fileName);
         if (fileName == null || !fileName.contains(".")) {
             return "";
         }
@@ -452,16 +476,21 @@ public class FileService {
      * @throws IOException If there was an error saving the file
      */
     private String saveFile(MultipartFile file, String path) throws IOException {
+        logger.trace("Saving file to path: {}. Original file name: {}, Content type: {}, Size: {} bytes", path, file.getOriginalFilename(), file.getContentType(), file.getSize());
+
         // Create directory if it doesn't exist
         Path uploadPath = Paths.get(path).getParent();
         if (!Files.exists(uploadPath)) {
+            logger.trace("Upload directory does not exist. Attempting to create directories for path: {}", uploadPath.toString());
             Files.createDirectories(uploadPath);
         }
 
         // Save the file
+        logger.trace("Attempting to save file to path: {}", path);
         Path filePath = Paths.get(path);
         Files.write(filePath, file.getBytes());
 
+        logger.trace("Successfully saved file to path: {}", path);
         return filePath.toString();
     }
 
@@ -473,6 +502,8 @@ public class FileService {
      * @throws IOException If there was an error deleting the file
      */
     private boolean deleteFileHelper(String path) throws IOException{
+        logger.trace("Attempting to delete file at path: {}", path);
+
         Path filePath = Paths.get(path);
         return Files.deleteIfExists(filePath);
     }
