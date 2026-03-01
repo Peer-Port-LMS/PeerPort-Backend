@@ -146,6 +146,129 @@ public class AssignmentSubmissionService {
     }
 
     /**
+     * Get the current user's submissions for a specific assignment
+     * If the user is an instructor or admin, returns all submissions for the assignment. 
+     * If the user is a student, returns only their own submissions for the assignment.
+     * @param assignmentId - The ID of the assignment to get submissions for
+     * @return List of the current user's submissions for the specified assignment
+     * @throws AssignmentNotFoundException If the assignment is not found (Handled in GlobalExceptionHandler)
+     * @throws UserNotFoundException If the user is not found (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthenticatedException If the user is not authenticated (Handled in GlobalExceptionHandler)
+     * @throws UserNotAuthorizedException If the user is not authorized to view the submissions (Handled in GlobalExceptionHandler)
+     */
+    public List<AssignmentSubmissionModel> getUsersSubmissionsForAssignment(String assignmentId) {
+        // Get the current user
+        UserModel user = authService.getCurrentUser();
+        logger.debug("Getting submissions for assignment ID: {} user Id: {}", assignmentId, user.getUserId());
+
+        // Get the assignment
+        AssignmentModel assignment = assignmentService.getAssignmentById(assignmentId);
+
+        // Check if the user is allowed to access the assignment (This will throw an exception if not allowed)
+        this.assignmentService.userAllowedToAccessAssignment(assignment);
+
+        // Get the current user's role
+        Role role = user.getRole();
+
+        // If admin or instructor return all submissions for the assignment
+        if (role == Role.ADMIN || role == Role.INSTRUCTOR) {
+            logger.debug("User is {} returning all submissions for the assignment.", role);
+            return assignment.getSubmissions();
+        }
+
+        // Students (and other non-admin, non-instructor roles): only their own submissions
+        logger.trace("User is student, finding their submissions for the assignment.");
+        List<AssignmentSubmissionModel> userSubmissions = new ArrayList<>();
+        for (AssignmentSubmissionModel submission : assignment.getSubmissions()) {
+            if (submission.getUser() != null && submission.getUser().equals(user)) {
+                userSubmissions.add(submission);
+            }
+        }
+
+        // Sort the submissions by date submitted, most recent first
+        userSubmissions.sort((s1, s2) -> s2.getDateSubmitted().compareTo(s1.getDateSubmitted()));
+
+        // Return the submissions
+        logger.debug("Returning {} submissions for assignment ID: {} for user ID: {}", userSubmissions.size(), assignmentId, user.getUserId());
+        return userSubmissions;
+    }
+
+    public float getUsersGradeForAssignment(String assignmentId) {
+        logger.trace("Getting user's grade for assignment ID: {}", assignmentId);
+        // Get the user and their role
+        UserModel user = authService.getCurrentUser();
+        Role role = user.getRole();
+        
+        if (role == Role.ADMIN || role == Role.INSTRUCTOR) {
+            logger.debug("User({}) is getting the average grade for assignment ID: {}", user.getUserId(), assignmentId);
+            
+            // Get the submissions for the assignment
+            List<AssignmentSubmissionModel> submissions = this.getUsersSubmissionsForAssignment(assignmentId);
+
+            // Calculate the average grade
+            float totalPercentage = 0;
+            int gradedSubmissionsCount = 0;
+            for (AssignmentSubmissionModel submission : submissions) {
+                if (submission.getGrade() != null && submission.getGrade().getPercentage() != -1) {
+                    totalPercentage += submission.getGrade().getPercentage();
+                    gradedSubmissionsCount++;
+                }
+            }
+
+            // If there are no GRADED submissions, return -1 to indicate no grade available
+            if (gradedSubmissionsCount == 0) {
+                logger.debug("No graded submissions found for assignment ID: {}. Returning -1.", assignmentId);
+                return -1;
+            }
+
+            // Calculate the average percentage
+            float averagePercentage = totalPercentage / gradedSubmissionsCount;
+
+            // Return the average percentage
+            logger.debug("Returning average grade of {}% for assignment ID: {}.", averagePercentage, assignmentId);
+            return averagePercentage;
+        }
+
+        // For students, return their own grade for the assignment
+        logger.debug("User({}) is getting their own grade for assignment ID: {}.", user.getUserId(), assignmentId);
+        
+        // Get the user's submissions for the assignment
+        List<AssignmentSubmissionModel> userSubmissions = this.getUsersSubmissionsForAssignment(assignmentId);
+        
+        // Remove ungraded submissions
+        userSubmissions.removeIf(submission -> submission.getGrade() == null || submission.getGrade().getPercentage() == -1);
+        
+        // Sort the submissions by the most recently graded submission first
+        userSubmissions.sort((s1, s2) -> {
+            // If a submission is ungraded, treat it as less recent than any graded submission
+            if (s1.getGrade() == null || s1.getGrade().getDateGraded() == null) {
+                return 1;
+            }
+
+            // If s2 is ungraded, treat it as less recent than any graded submission
+            if (s2.getGrade() == null || s2.getGrade().getDateGraded() == null) {
+                return -1;
+            }
+
+            // Both submissions are graded, sort by date graded
+            return s2.getGrade().getDateGraded().compareTo(s1.getGrade().getDateGraded());
+        });
+
+        // Get the most recent grade percentage from the user's submissions, if available
+        float latestGradePercentage = -1;
+        for (AssignmentSubmissionModel submission : userSubmissions) {
+            if (submission.getGrade() != null && submission.getGrade().getPercentage() != -1) {
+                latestGradePercentage = submission.getGrade().getPercentage();
+                break;
+            }
+        }
+
+        // Return the latest grade percentage
+        logger.debug("Returning latest grade percentage of {}% for assignment ID: {}.", latestGradePercentage, assignmentId);
+        return latestGradePercentage;
+    }
+
+    /**
      * Create a new assignment submission
      * 
      * @param submission The assignment submission model to create
