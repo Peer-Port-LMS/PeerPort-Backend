@@ -161,6 +161,9 @@ public class AssignmentSubmissionService {
 
         // Get the user
         UserModel user = authService.getCurrentUser();
+
+        // Check if the user is allowed to submit to the assignment
+        userAllowedToModifySubmission(submission);
         
         // Link the submission to the assignment
         submission.setAssignment(assignment);
@@ -168,12 +171,10 @@ public class AssignmentSubmissionService {
         // Link the submission to the user
         submission.setUser(user);
 
-        // Check if the user is allowed to submit to the assignment
-        userAllowedToModifySubmission(submission);
-
         // Save the submission
         logger.debug("Saving new assignment submission for user ID: {} and assignment ID: {}", user.getUserId(), assignment.getAssignmentId());
-        return assignmentSubmissionRepository.save(submission);
+        AssignmentSubmissionModel savedSubmission = assignmentSubmissionRepository.save(submission);
+        return assignmentSubmissionRepository.save(savedSubmission);
     }
 
     /**
