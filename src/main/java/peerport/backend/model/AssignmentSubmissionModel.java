@@ -14,6 +14,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import peerport.backend.dto.FileDTO;
 import peerport.backend.dto.assignments.AssignmentSubmissionDTO;
@@ -46,8 +47,8 @@ public class AssignmentSubmissionModel {
     @OneToMany(mappedBy="assignmentSubmission", cascade=CascadeType.ALL, orphanRemoval=true)
     private List<FileModel> submittedFiles = new ArrayList<>();
 
-    // @OneToOne
-    // private GradeModel grade;
+    @OneToOne
+    private GradeModel grade;
 
 
     // Constructors
@@ -113,6 +114,10 @@ public class AssignmentSubmissionModel {
 
     public void setSubmittedFiles(List<FileModel> submittedFiles) {
         this.submittedFiles = submittedFiles;
+    }
+
+    public void setGrade(GradeModel grade) {
+        this.grade = grade;
     }
 
 
