@@ -144,6 +144,36 @@ public class ContentService {
     }
 
     /**
+     * Get structured content for a specific course (with parent-child relationships)
+     *
+     * @param courseId The ID of the course
+     * @return A list of root ContentWithChildrenDTO for the course
+     */
+    public List<ContentWithChildrenDTO> getStructuredContentByCourse(String courseId) {
+        logger.debug("Getting structured content for course ID: {}", courseId);
+
+        // Get and authorize access to course
+        CourseModel course = courseService.getCourseById(courseId);
+
+        // Convert to ContentWithChildrenDTO
+        List<ContentWithChildrenDTO> dtoList = new ArrayList<>();
+        for (ContentModel content : course.getContent()) {
+            dtoList.add(content.toContentWithChildrenDTO());
+        }
+
+        // Keep only root content (content without a parent)
+        List<ContentWithChildrenDTO> rootContent = new ArrayList<>();
+        for (ContentWithChildrenDTO contentDTO : dtoList) {
+            if (contentDTO.parentContent == null) {
+                rootContent.add(contentDTO);
+            }
+        }
+
+        logger.debug("Returning {} root content items for course ID: {}", rootContent.size(), courseId);
+        return rootContent;
+    }
+
+    /**
      * Get content by ID
      * 
      * @param contentId The ID of the content to retrieve

@@ -68,7 +68,7 @@ public class CourseController {
      * @throws UserNotAuthenticatedException If the user is not authenticated to perform this action
      */
     @GetMapping
-    @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN)")
+    
     public ResponseEntity<List<CourseWithInstructorsDTO>> getAllCourses() {
         logger.debug("Retrieving all courses");
 

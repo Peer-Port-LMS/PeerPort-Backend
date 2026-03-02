@@ -67,6 +67,24 @@ public class ContentController {
     }
 
     /**
+     * Get all content for a specific course
+     *
+     * @param courseId The ID of the course
+     * @return ResponseEntity with the list of ContentWithChildrenDTO for the course
+     */
+    @GetMapping("/course/{courseId}")
+    public ResponseEntity<List<ContentWithChildrenDTO>> getContentByCourseId(@PathVariable String courseId) {
+        logger.debug("Retrieving content for course ID: {}", courseId);
+
+        // Get structured content scoped to this course
+        List<ContentWithChildrenDTO> contentList = contentService.getStructuredContentByCourse(courseId);
+
+        // Return the content list
+        logger.debug("Successfully retrieved {} content items for course ID: {}", contentList.size(), courseId);
+        return ResponseEntity.ok(contentList);
+    }
+
+    /**
      * Get content by ID
      * 
      * @param contentId The ID of the content to retrieve

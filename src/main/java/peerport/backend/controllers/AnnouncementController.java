@@ -279,7 +279,7 @@ public class AnnouncementController {
      * @throws UserNotAuthenticatedException If the user is not authenticated to perform this action
      * @throws UserNotAuthorizedException If the user is not authorized to patch this announcement
      */
-    @PatchMapping("/patch/{announcementId}")
+    @PatchMapping("/{announcementId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<AnnouncementDTO> patchAnnouncement(@PathVariable String announcementId, @RequestBody AnnouncementModel patchedAnnouncement) {
         logger.debug("Patching announcement with ID: {}", announcementId);
@@ -302,7 +302,7 @@ public class AnnouncementController {
      * @throws UserNotAuthenticatedException If the user is not authenticated to perform this action
      * @throws UserNotAuthorizedException If the user is not authorized to patch this announcement
      */
-    @PatchMapping(path="/patch/{announcementId}", consumes=MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PatchMapping(path="/{announcementId}", consumes=MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<AnnouncementDTO> patchAnnouncement(
         @PathVariable String announcementId, 
@@ -369,7 +369,7 @@ public class AnnouncementController {
      * @throws UserNotAuthenticatedException If the user is not authenticated to perform this action
      * @throws UserNotAuthorizedException If the user is not authorized to delete this announcement
      */
-    @DeleteMapping("/delete/{announcementId}")
+    @DeleteMapping("/{announcementId}")
     @PreAuthorize("@authService.hasAnyRole(@authService.ADMIN, @authService.INSTRUCTOR)")
     public ResponseEntity<Void> deleteAnnouncement(@PathVariable String announcementId) {
         logger.debug("Deleting announcement with ID: {}", announcementId);
