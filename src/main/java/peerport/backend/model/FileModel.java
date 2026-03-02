@@ -6,7 +6,6 @@ import java.util.Date;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -19,6 +18,7 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.PreRemove;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
+import peerport.backend.config.HostingUrlConfig;
 import peerport.backend.dto.FileDTO;
 import peerport.backend.service.FileService;
 
@@ -71,11 +71,6 @@ public class FileModel {
     @JoinColumn(name="\"assignmentSubmissionId\"")
     private AssignmentSubmissionModel assignmentSubmission;
 
-
-    // Environment variables (ignored by JPA)
-    @Transient
-    @Value("${server.hosting-url}")
-    private String serverUrl;
 
     @Transient
     private static String filesEndpoint = "files";
@@ -185,7 +180,7 @@ public class FileModel {
 
 
     public String getUrl() {
-        return serverUrl + "/" + filesEndpoint + "/" + fileId;
+        return buildFileUrl();
     }
 
 
@@ -197,12 +192,28 @@ public class FileModel {
         // Fill in the fields
         dto.fileId = this.fileId;
         dto.fileName = this.fileName;
-        dto.url = this.serverUrl + "/" + FileModel.filesEndpoint + "/" + this.fileId;
+        dto.url = buildFileUrl();
         dto.contentType = this.contentType;
         dto.fileType = this.fileType;
 
         // Return the DTO
         return dto;
+    }
+
+    private String buildFileUrl() {
+        String endpointPath = "/" + FileModel.filesEndpoint + "/" + this.fileId;
+        String configuredServerUrl = HostingUrlConfig.getHostingUrl();
+
+        // If no configured server URL is available, return relative path
+        if (configuredServerUrl == null || configuredServerUrl.isBlank()) {
+            return endpointPath;
+        }
+
+        String normalizedServerUrl = configuredServerUrl.endsWith("/")
+            ? configuredServerUrl.substring(0, configuredServerUrl.length() - 1)
+            : configuredServerUrl;
+
+        return normalizedServerUrl + endpointPath;
     }
 
 
